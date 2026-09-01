@@ -283,6 +283,7 @@
   /* ---------- success ---------- */
   .success-mark{ width:64px; height:64px; margin:8px auto 0; border-radius:50%; background:var(--teal-soft); display:flex; align-items:center; justify-content:center; }
   .success-mark svg{ width:28px; height:28px; }</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 </head>
 <body>
 
@@ -331,8 +332,28 @@
           Continue with Google
         </button>
         <button class="btn" onclick="showPhone()">Continue with Mobile Number</button>
+        <button class="btn" onclick="showEmailLogin()">Continue with Email</button>
       </div>
       <p class="note" style="margin-top:16px;">New here? <a href="#" onclick="goScreen('signup-1'); return false;" style="color:var(--ink); font-weight:700;">Create an account</a></p>
+
+      <div id="mode-email" style="display:none;">
+        <div class="field">
+          <label for="login-email">Email address</label>
+          <input type="email" id="login-email" placeholder="you@gov.in" autocomplete="email">
+        </div>
+        <div class="field">
+          <label for="login-pass">Password</label>
+          <div class="pw-wrap">
+            <input type="password" id="login-pass" placeholder="Your password" autocomplete="current-password">
+            <button type="button" class="pw-toggle mono" onclick="togglePw('login-pass', this)">SHOW</button>
+          </div>
+        </div>
+        <p class="errmsg show" id="login-error" style="display:none;"></p>
+        <div class="stack" style="margin-top:16px;">
+          <button class="btn btn-solid" id="login-submit-btn" onclick="loginWithEmail()">Sign in</button>
+        </div>
+        <p class="note">New here? <a href="#" onclick="goScreen('signup-1'); return false;" style="color:var(--ink); font-weight:700;">Create an account</a></p>
+      </div>
 
       <div id="mode-phone" style="display:none;">
         <div class="field">
@@ -554,7 +575,7 @@
       <div class="spacer"></div>
       <div class="row2" style="margin-top:24px;">
         <button class="btn" onclick="goScreen('signup-4')">&larr; Edit</button>
-        <button class="btn btn-solid" onclick="createAccount()">Create account</button>
+        <button class="btn btn-solid" id="create-account-btn" onclick="createAccount()">Create account</button>
       </div>
     </div>
   </section>
@@ -813,12 +834,50 @@
   function showPhone(){
     document.getElementById('mode-choice').style.display = 'none';
     document.getElementById('mode-phone').style.display = 'block';
+    document.getElementById('mode-email').style.display = 'none';
+    document.getElementById('back-to-choice').style.display = 'block';
+  }
+  function showEmailLogin(){
+    document.getElementById('mode-choice').style.display = 'none';
+    document.getElementById('mode-phone').style.display = 'none';
+    document.getElementById('mode-email').style.display = 'block';
     document.getElementById('back-to-choice').style.display = 'block';
   }
   function showChoice(){
     document.getElementById('mode-choice').style.display = 'flex';
     document.getElementById('mode-phone').style.display = 'none';
+    document.getElementById('mode-email').style.display = 'none';
     document.getElementById('back-to-choice').style.display = 'none';
+  }
+  async function loginWithEmail(){
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-pass').value;
+    const errEl = document.getElementById('login-error');
+    const btn = document.getElementById('login-submit-btn');
+    errEl.style.display = 'none';
+
+    if(!email || !password){
+      errEl.textContent = 'Enter both your email and password.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
+
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+    btn.disabled = false;
+    btn.textContent = 'Sign in';
+
+    if(error){
+      console.error('Login failed:', error);
+      errEl.textContent = error.message || 'Could not sign in. Check your email and password.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    goScreen('role');
   }
   function startGoogleLogin(btn){
     const original = btn.innerHTML;
@@ -1111,9 +1170,67 @@
     goScreen('signup-review');
   }
 
-  function createAccount(){
-    const name = document.getElementById('f-name').value.trim().split(' ')[0] || 'there';
-    document.getElementById('thanks-name').textContent = name;
+  // ---- Supabase: real auth signup + profile row ----
+  const SUPABASE_URL = 'https://hvkkwapsnmaalcqzmyfh.supabase.co';
+  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_28mh4OF6mfGsqN2eyrtH7w_EgliBmqw';
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+  async function createAccount(){
+    const btn = document.getElementById('create-account-btn');
+    const name = document.getElementById('f-name').value.trim();
+    const email = document.getElementById('f-email').value.trim();
+    const password = document.getElementById('f-pass').value;
+    const ministry = document.getElementById('f-ministry').value.trim();
+    const desig = document.getElementById('f-desig').value.trim();
+    const years = Number(document.getElementById('f-years').value);
+    const qual = document.getElementById('f-qual').value;
+    const field = document.getElementById('f-field').value.trim();
+    const courses = noneDone ? [] : selectedCourses;
+
+    if(btn){ btn.disabled = true; btn.textContent = 'Creating account…'; }
+
+    // Step 1: create the actual auth user (this is what lets them log back in later)
+    const { data: signUpData, error: signUpError } = await supabaseClient.auth.signUp({
+      email: email,
+      password: password
+    });
+
+    if(signUpError){
+      console.error('Auth signup failed:', signUpError);
+      if(btn){ btn.disabled = false; btn.textContent = 'Create account'; }
+      alert(signUpError.message || 'Something went wrong creating your account. Please try again.');
+      return;
+    }
+
+    const userId = signUpData.user ? signUpData.user.id : null;
+    if(!userId){
+      // Shouldn't normally happen, but guards against an unexpected response shape
+      if(btn){ btn.disabled = false; btn.textContent = 'Create account'; }
+      alert('Account created, but something went wrong linking your profile. Please contact support.');
+      return;
+    }
+
+    // Step 2: insert the profile row, keyed to the new auth user's id
+    const { error: profileError } = await supabaseClient.from('profiles').insert({
+      id: userId,
+      full_name: name,
+      ministry_department: ministry,
+      designation: desig,
+      years_in_role: years,
+      qualification: qual,
+      field_of_study: field,
+      igot_courses: courses
+    });
+
+    if(btn){ btn.disabled = false; btn.textContent = 'Create account'; }
+
+    if(profileError){
+      console.error('Profile save failed:', profileError);
+      alert('Your account was created, but saving your profile details failed. Please try logging in and updating your profile.');
+      return;
+    }
+
+    document.getElementById('thanks-name').textContent = name.split(' ')[0] || 'there';
     goScreen('signup-success');
   }
 </script>
