@@ -49,11 +49,27 @@ function jump(name) {
   goScreen(name);
 }
 
+// ---- dashboard sidebar + tabs (dashboard.html only) ----
+function toggleSidebar() {
+  const sb = document.getElementById('appSidebar');
+  const bd = document.getElementById('sidebarBackdrop');
+  if (sb) sb.classList.toggle('open');
+  if (bd) bd.classList.toggle('show');
+}
+function switchDashTab(tab) {
+  ['overview', 'progress'].forEach(t => {
+    const btn = document.getElementById('tab-' + t);
+    const panel = document.getElementById('panel-' + t);
+    if (btn) btn.classList.toggle('active', t === tab);
+    if (panel) panel.style.display = (t === tab) ? 'block' : 'none';
+  });
+}
+
 // ============================================================
 // Session-aware bits: fab visibility + profile hydration.
 // Runs on every page via initPage() at the bottom of this file.
 // ============================================================
-const APP_SCREENS = ['role', 'upload', 'spin', 'quiz', 'results', 'practice', 'progress'];
+const APP_SCREENS = ['dashboard', 'role', 'upload', 'spin', 'quiz', 'results', 'practice', 'progress'];
 let currentUser = null;
 let quizTaken = false;
 let readinessScore = 0;
@@ -62,20 +78,29 @@ async function initPage() {
   const screen = document.body.dataset.screen;
   const fab = document.getElementById('profileFab');
 
+  const sidebarPageMap = {
+    dashboard: 'dashboard.html', role: 'role.html', upload: 'upload.html',
+    progress: 'progress.html', practice: 'practice.html', profile: 'profile.html'
+  };
+  const activeHref = sidebarPageMap[screen];
+  document.querySelectorAll('.sb-link').forEach(link => {
+    if (link.tagName === 'A') link.classList.toggle('active', link.getAttribute('href') === activeHref);
+  });
+
   const { data: { session } } = await supabaseClient.auth.getSession();
 
   if (session) {
     const { data: profile } = await supabaseClient
       .from('profiles')
-      .select('*')
+      .select('*, ministries(name), job_roles(name)')
       .eq('id', session.user.id)
       .single();
 
     currentUser = {
       name: profile?.full_name || '',
       email: session.user.email || '',
-      ministry: profile?.ministry_department || '',
-      designation: profile?.designation || '',
+      ministry: profile?.ministries?.name || '',
+      designation: profile?.job_roles?.name || '',
       years: profile?.years_in_role,
       qualification: profile?.qualification || '',
       field: profile?.field_of_study || '',
@@ -89,12 +114,43 @@ async function initPage() {
       if (fabInitials) fabInitials.textContent = initials(currentUser.name);
       fab.setAttribute('onclick', "location.href='profile.html?from=" + screen + "'");
     }
+
+    const sbName = document.getElementById('sbUserName');
+    const sbRole = document.getElementById('sbUserRole');
+    if (sbName) sbName.textContent = currentUser.name || 'Your profile';
+    if (sbRole) sbRole.textContent = [currentUser.designation, currentUser.ministry].filter(Boolean).join(' · ') || 'Statistical Service';
   } else if (fab) {
     fab.style.display = 'none';
   }
 
   // ---- per-screen setup that used to happen inside goScreen() ----
   if (screen === 'profile') renderProfile();
+
+  if (screen === 'dashboard') {
+    if (currentUser) {
+      const firstName = currentUser.name.split(' ')[0] || 'there';
+      const gName = document.getElementById('dashGreetName');
+      const gRole = document.getElementById('dashGreetRole');
+      if (gName) gName.textContent = 'Welcome back, ' + firstName;
+      if (gRole) gRole.textContent = [currentUser.designation, currentUser.ministry].filter(Boolean).join(' · ') || "Here's your learning snapshot.";
+    }
+
+    if (quizTaken) {
+      const emptyOver = document.getElementById('dash-overview-empty');
+      const fullOver = document.getElementById('dash-overview-full');
+      const emptyProg = document.getElementById('dash-progress-empty');
+      const fullProg = document.getElementById('dash-progress-full');
+      const statR = document.getElementById('statReady');
+      const statW = document.getElementById('statWeak');
+
+      if (emptyOver) emptyOver.style.display = 'none';
+      if (fullOver) fullOver.style.display = 'block';
+      if (emptyProg) emptyProg.style.display = 'none';
+      if (fullProg) fullProg.style.display = 'block';
+      if (statR) statR.textContent = readinessScore + '%';
+      if (statW) statW.textContent = '2';
+    }
+  }
 
   if (screen === 'results') {
     setTimeout(animateMeter, 150);
@@ -315,7 +371,7 @@ async function loginWithEmail() {
     return;
   }
 
-  goScreen('role');
+  goScreen('dashboard');
 }
 function startGoogleLogin(btn) {
   // Demo stub — not wired to a real provider. Real accounts should use
@@ -342,31 +398,6 @@ function verifyOtp() {
   const vals = ['otp1', 'otp2', 'otp3', 'otp4'].map(id => document.getElementById(id).value);
   if (vals.some(v => v === '')) { alert('Enter all 4 digits.'); return; }
   alert('Mobile OTP sign-in is a demo placeholder in this build. Use "Continue with Email" to sign in with a real account.');
-}
-
-// ---- role picker (role.html only) ----
-const roles = [
-  { name: 'Statistical Officer', ic: 'SO' },
-  { name: 'Senior Stat. Officer', ic: 'SS' },
-  { name: 'Data Analyst', ic: 'DA' },
-  { name: 'Assistant Director', ic: 'AD' },
-  { name: 'Deputy Director', ic: 'DD' },
-  { name: 'Investigator', ic: 'IN' }
-];
-const roleList = document.getElementById('role-list');
-if (roleList) {
-  roles.forEach((r, i) => {
-    const el = document.createElement('div');
-    el.className = 'role-row rise';
-    el.style.animationDelay = (i * 0.05) + 's';
-    el.innerHTML = `<div class="badge">${r.ic}</div><div class="rname">${r.name}</div><div class="chev">&rarr;</div>`;
-    el.onclick = () => {
-      document.querySelectorAll('.role-row').forEach(c => c.classList.remove('selected'));
-      el.classList.add('selected');
-      document.getElementById('role-continue').disabled = false;
-    };
-    roleList.appendChild(el);
-  });
 }
 
 // ---- upload (upload.html only) ----
@@ -472,6 +503,35 @@ function showSignupStep(name) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// ---- ministry / job role dropdowns (signup.html step 2 only) ----
+async function loadMinistryAndRoleDropdowns() {
+  const ministrySelect = document.getElementById('f-ministry');
+  const roleSelect = document.getElementById('f-desig');
+  if (!ministrySelect || !roleSelect) return;
+
+  const [{ data: ministries, error: ministryError }, { data: jobRoles, error: roleError }] = await Promise.all([
+    supabaseClient.from('ministries').select('id, name').order('name'),
+    supabaseClient.from('job_roles').select('id, name').order('name')
+  ]);
+
+  if (ministryError || !ministries) {
+    console.error('Could not load ministries:', ministryError);
+    ministrySelect.innerHTML = '<option value="">Could not load ministries</option>';
+  } else {
+    ministrySelect.innerHTML = '<option value="">Select one</option>' +
+      ministries.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+  }
+
+  if (roleError || !jobRoles) {
+    console.error('Could not load job roles:', roleError);
+    roleSelect.innerHTML = '<option value="">Could not load job roles</option>';
+  } else {
+    roleSelect.innerHTML = '<option value="">Select one</option>' +
+      jobRoles.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+  }
+}
+loadMinistryAndRoleDropdowns();
+
 function showFieldError(inputId, errId, show) {
   document.getElementById(inputId).classList.toggle('err', show);
   document.getElementById(errId).classList.toggle('show', show);
@@ -546,33 +606,35 @@ function goStep(dir) {
 }
 
 // ---- iGOT course chips (signup.html only) ----
-const igotCourses = [
-  'Foundations of Sampling Design',
-  'Data Visualization for Reports',
-  'Data Quality Checks in the Field',
-  'Basics of Official Statistics',
-  'Ethics in Public Data Collection',
-  'Intro to iGOT Karmayogi'
-];
 let selectedCourses = [];
 let noneDone = false;
-
 const chipGrid = document.getElementById('course-chips');
-if (chipGrid) {
-  igotCourses.forEach(name => {
+
+async function loadCourseChips() {
+  if (!chipGrid) return;
+  const { data: courses, error } = await supabaseClient.from('courses').select('id, title').order('title');
+  if (error || !courses) {
+    console.error('Could not load courses:', error);
+    chipGrid.innerHTML = '<p class="note">Could not load the course list. You can skip this step.</p>';
+    return;
+  }
+  chipGrid.innerHTML = '';
+  courses.forEach(course => {
     const el = document.createElement('button');
     el.type = 'button';
     el.className = 'chip';
-    el.innerHTML = `<span class="dot"></span>${name}`;
+    el.innerHTML = `<span class="dot"></span>${course.title}`;
     el.onclick = () => {
       if (noneDone) toggleNone();
       el.classList.toggle('selected');
-      if (el.classList.contains('selected')) selectedCourses.push(name);
-      else selectedCourses = selectedCourses.filter(c => c !== name);
+      if (el.classList.contains('selected')) selectedCourses.push(course.title);
+      else selectedCourses = selectedCourses.filter(c => c !== course.title);
     };
     chipGrid.appendChild(el);
   });
 }
+loadCourseChips();
+
 
 function toggleNone() {
   noneDone = !noneDone;
@@ -599,8 +661,8 @@ function showReview() {
   const rows = [
     ['Name', document.getElementById('f-name').value.trim()],
     ['Email', document.getElementById('f-email').value.trim()],
-    ['Ministry / Dept.', document.getElementById('f-ministry').value.trim()],
-    ['Designation', document.getElementById('f-desig').value.trim()],
+    ['Ministry / Dept.', document.getElementById('f-ministry').selectedOptions[0]?.text || ''],
+    ['Designation', document.getElementById('f-desig').selectedOptions[0]?.text || ''],
     ['Years in role', document.getElementById('f-years').value],
     ['Qualification', document.getElementById('f-qual').value],
     ['Field of study', document.getElementById('f-field').value.trim()],
@@ -617,8 +679,8 @@ async function createAccount() {
   const name = document.getElementById('f-name').value.trim();
   const email = document.getElementById('f-email').value.trim();
   const password = document.getElementById('f-pass').value;
-  const ministry = document.getElementById('f-ministry').value.trim();
-  const desig = document.getElementById('f-desig').value.trim();
+  const ministryId = document.getElementById('f-ministry').value || null;
+  const jobRoleId = document.getElementById('f-desig').value || null;
   const years = Number(document.getElementById('f-years').value);
   const qual = document.getElementById('f-qual').value;
   const field = document.getElementById('f-field').value.trim();
@@ -650,8 +712,8 @@ async function createAccount() {
   const { error: profileError } = await supabaseClient.from('profiles').insert({
     id: userId,
     full_name: name,
-    ministry_department: ministry,
-    designation: desig,
+    ministry_id: ministryId,
+    job_role_id: jobRoleId,
     years_in_role: years,
     qualification: qual,
     field_of_study: field,

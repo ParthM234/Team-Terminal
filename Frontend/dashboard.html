@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Sankhya Setu</title>
+<meta name="description" content="Sankhya Setu reads what your role needs, runs a short quiz to find your gaps, and routes you straight to the right course on iGOT Karmayogi.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</head>
+<body data-screen="dashboard">
+
+<div class="bg-glow" aria-hidden="true"></div>
+
+  <div class="dash-corner-nav">
+    <button class="nav-hamburger" onclick="toggleSidebar()" aria-label="Open Menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 20 20"><rect x="1" y="1" width="18" height="18" rx="3" fill="none" stroke="#12181F" stroke-width="1.6"/><path d="M5 10.5l3 3 7-7" fill="none" stroke="#D9A62E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      SANKHYA SETU
+    </div>
+  </div>
+<div id="app">
+  <section class="screen active" id="screen-dashboard">
+
+    <div class="wrap">
+      <div class="eyebrow" style="margin-top:16px;">YOUR DASHBOARD</div>
+      <h1 id="dashGreetName" style="margin-top:6px;">Welcome back</h1>
+      <p class="lede" id="dashGreetRole" style="margin-top:4px;">Here's your learning snapshot.</p>
+
+      <!-- Key Stat Row -->
+      <div class="ledger" style="margin-top:18px; padding:14px 12px;">
+        <div class="ledger-tab">SNAPSHOT</div>
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); text-align:center; gap:8px;">
+          <div>
+            <div class="mono" id="statReady" style="font-size:20px; font-weight:700;">—</div>
+            <div style="font-size:10.5px; color:var(--slate); font-weight:700; text-transform:uppercase; margin-top:2px;">Role Ready</div>
+          </div>
+          <div style="border-left:1px dashed var(--line); border-right:1px dashed var(--line);">
+            <div class="mono" id="statWeak" style="font-size:20px; font-weight:700;">—</div>
+            <div style="font-size:10.5px; color:var(--slate); font-weight:700; text-transform:uppercase; margin-top:2px;">Gaps Found</div>
+          </div>
+          <div>
+            <div class="mono" id="statCourses" style="font-size:20px; font-weight:700;">0</div>
+            <div style="font-size:10.5px; color:var(--slate); font-weight:700; text-transform:uppercase; margin-top:2px;">iGOT Done</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Interactive Rectangular Tabs -->
+      <div class="interactive-tabs">
+        <button type="button" class="tab-card-btn active" id="tab-overview" onclick="switchDashTab('overview')">
+          <span class="tab-card-badge">STATUS</span>
+          <span class="tab-card-title">Overview</span>
+          <span class="tab-card-sub">Diagnostics & results</span>
+        </button>
+        <button type="button" class="tab-card-btn" id="tab-quiz" onclick="goScreen('role')">
+          <span class="tab-card-badge">ACTION</span>
+          <span class="tab-card-title">Make a Quiz</span>
+          <span class="tab-card-sub">Standard or material</span>
+        </button>
+        <button type="button" class="tab-card-btn" id="tab-progress" onclick="switchDashTab('progress')">
+          <span class="tab-card-badge">TRACKING</span>
+          <span class="tab-card-title">Progress</span>
+          <span class="tab-card-sub">Growth & re-tests</span>
+        </button>
+      </div>
+
+      <!-- ================= TAB 1: OVERVIEW ================= -->
+      <div class="dash-panel" id="panel-overview" style="display:block;">
+        
+        <!-- Empty State (No quiz taken yet) -->
+        <div id="dash-overview-empty" style="text-align:center; padding:32px 14px; background:var(--card); border:1px dashed var(--line); border-radius:8px; margin-top:20px;">
+          <div style="width:40px; height:40px; border-radius:50%; background:var(--amber-soft); color:var(--ink); font-weight:700; font-family:'IBM Plex Mono',monospace; display:flex; align-items:center; justify-content:center; margin:0 auto 10px;">?</div>
+          <h3 style="font-size:16px; font-weight:700; font-family:'Space Grotesk',sans-serif;">You haven't taken a diagnostic yet</h3>
+          <p style="font-size:13px; color:var(--slate); margin-top:6px; line-height:1.5;">Run the quick quiz or upload your own reference file to generate your competency report.</p>
+          <div class="stack" style="margin-top:20px;">
+            <button class="btn btn-solid" onclick="goScreen('role')">Take the quick quiz</button>
+            <button class="btn-ghost" onclick="goScreen('upload')" style="margin:0 auto;">Upload material instead &rarr;</button>
+          </div>
+        </div>
+
+        <!-- Populated State (Quiz taken) -->
+        <div id="dash-overview-full" style="display:none;">
+          <div class="meter-wrap" style="margin-top:20px;">
+            <div class="meter-num mono" id="dashMeterNum">60%</div>
+            <div class="meter-lab">Ready for your role</div>
+            <div class="meter-track">
+              <div class="meter-seg"><i style="width:100%;"></i></div>
+              <div class="meter-seg"><i style="width:100%;"></i></div>
+              <div class="meter-seg"><i style="width:100%;"></i></div>
+              <div class="meter-seg"><i style="width:0%;"></i></div>
+              <div class="meter-seg"><i style="width:0%;"></i></div>
+            </div>
+          </div>
+
+          <div class="plain-msg" style="margin-top:20px;">
+            <b>You're strongest in Statistical Analysis.</b>
+            <span>Focus on Sampling and Data Visualization next — that's where the gap is biggest.</span>
+          </div>
+
+          <div class="ledger-list" style="margin-top:16px;">
+            <div class="lrow"><span class="sq2" style="background:var(--brick);"></span><span class="lname">Sampling</span><span class="dots"></span><span class="lval mono">40%</span><span class="ltag mono">NEEDS WORK</span></div>
+            <div class="lrow"><span class="sq2" style="background:var(--brick);"></span><span class="lname">Data Visualization</span><span class="dots"></span><span class="lval mono">45%</span><span class="ltag mono">NEEDS WORK</span></div>
+            <div class="lrow"><span class="sq2" style="background:var(--amber);"></span><span class="lname">Data Quality</span><span class="dots"></span><span class="lval mono">60%</span><span class="ltag mono">GETTING THERE</span></div>
+            <div class="lrow"><span class="sq2" style="background:var(--teal);"></span><span class="lname">Survey Methodology</span><span class="dots"></span><span class="lval mono">70%</span><span class="ltag mono">SOLID</span></div>
+            <div class="lrow"><span class="sq2" style="background:var(--teal);"></span><span class="lname">Statistical Analysis</span><span class="dots"></span><span class="lval mono">85%</span><span class="ltag mono">STRONG</span></div>
+          </div>
+
+          <div class="eyebrow" style="text-align:left; margin-top:24px;">UP NEXT</div>
+          <div class="ledger course-card" style="margin-top:10px;">
+            <div class="num mono">01 / RECOMMENDED</div>
+            <h3 style="font-size:17px; font-weight:700; margin-top:6px; font-family:'Space Grotesk',sans-serif;">Foundations of Sampling Design</h3>
+            <p style="font-size:12.5px; color:var(--slate); margin-top:6px;">4 short lessons · about 1 hour · on iGOT Karmayogi</p>
+            <span class="course-tag mono" style="margin-top:10px;">FIXES: SAMPLING</span>
+          </div>
+
+          <div class="stack" style="margin-top:20px;">
+            <button class="btn btn-amber" onclick="goScreen('practice')">Continue learning</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ================= TAB 3: PROGRESS ================= -->
+      <div class="dash-panel" id="panel-progress" style="display:none;">
+        
+        <div id="dash-progress-empty" style="text-align:center; padding:32px 14px; background:var(--card); border:1px dashed var(--line); border-radius:8px; margin-top:20px;">
+          <div style="width:40px; height:40px; border-radius:50%; background:var(--teal-soft); color:var(--teal); font-weight:700; font-family:'IBM Plex Mono',monospace; display:flex; align-items:center; justify-content:center; margin:0 auto 10px;">↗</div>
+          <h3 style="font-size:16px; font-weight:700; font-family:'Space Grotesk',sans-serif;">Nothing to compare yet</h3>
+          <p style="font-size:13px; color:var(--slate); margin-top:6px; line-height:1.5;">Once you complete an assigned module, we quietly re-test the same skill area to show movement here.</p>
+          <div class="stack" style="margin-top:20px;">
+            <button class="btn btn-solid" onclick="goScreen('role')">Run your first quiz</button>
+          </div>
+        </div>
+
+        <div id="dash-progress-full" style="display:none;">
+          <p class="lede" style="text-align:left; margin-top:16px;">After finishing a course, we quietly re-check the same skills.</p>
+
+          <div class="compare-row" style="margin-top:14px;">
+            <div class="cname">Sampling</div>
+            <div class="compare-vals">
+              <span class="pill before">40%</span><span class="arrow">&rarr;</span><span class="pill after">65%</span>
+            </div>
+          </div>
+          <div class="compare-row">
+            <div class="cname">Data Visualization</div>
+            <div class="compare-vals">
+              <span class="pill before">45%</span><span class="arrow">&rarr;</span><span class="pill same">48%</span>
+            </div>
+          </div>
+
+          <div style="text-align:center;">
+            <div class="badge-win">✓ SAMPLING MOVED FROM WEAK TO GOOD</div>
+          </div>
+
+          <div class="plain-msg" style="margin-top:20px;">
+            <b>Data Visualization needs one more pass.</b>
+            <span>Small gain so far — a fresh set of questions will target it more precisely.</span>
+          </div>
+
+          <div class="stack" style="margin-top:20px;">
+            <button class="btn btn-solid" onclick="startQuiz('reassess')">Take a new quiz on it</button>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="spacer"></div>
+    </div>
+  </section>
+</div>
+
+<div class="profile-fab" id="profileFab" title="Your profile" style="display:none;">
+  <span id="fabInitials">--</span>
+  <img id="fabImg" style="display:none;" alt="">
+</div>
+
+<div class="demo-jump">
+  <div class="demo-menu" id="demoMenu">
+    <div class="lbl">Jump to screen (demo)</div>
+    <button onclick="jump('landing')">0 · Landing</button>
+    <button onclick="jump('login')">1 · Login</button>
+    <button onclick="jump('signup-1')">1b · Sign up</button>
+    <button onclick="jump('dashboard')">1c · Dashboard</button>
+    <button onclick="jump('role')">2 · Pick role</button>
+    <button onclick="jump('upload')">3 · Upload material</button>
+    <button onclick="jump('spin')">4 · Scoring</button>
+    <button onclick="jump('quiz')">5 · Quiz</button>
+    <button onclick="jump('results')">6 · Results</button>
+    <button onclick="jump('practice')">7 · Learn</button>
+    <button onclick="jump('progress')">8 · Progress</button>
+    <button onclick="jump('profile')">9 · Profile</button>
+  </div>
+  <button onclick="toggleDemoMenu()" aria-label="Jump to screen">::</button>
+</div>
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+<aside class="app-sidebar" id="appSidebar">
+  <div class="sb-header">
+    <div class="brand" style="justify-content:flex-start;">
+      <svg class="mark" viewBox="0 0 20 20"><rect x="1" y="1" width="18" height="18" rx="3" fill="none" stroke="#12181F" stroke-width="1.6"/><path d="M5 10.5l3 3 7-7" fill="none" stroke="#D9A62E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      SANKHYA SETU
+    </div>
+    <button class="sb-close" onclick="toggleSidebar()">&times;</button>
+  </div>
+
+  <nav class="sb-nav">
+    <div class="sb-group-label">MAIN</div>
+    <a href="dashboard.html" class="sb-link"><span>🏠</span> Dashboard</a>
+    <a href="role.html" class="sb-link"><span>🎯</span> Role Diagnostic</a>
+    <a href="upload.html" class="sb-link"><span>📄</span> Upload Material</a>
+    <a href="progress.html" class="sb-link"><span>↗</span> Progress Tracker</a>
+
+    <div class="sb-group-label">LEARNING</div>
+    <a href="practice.html" class="sb-link"><span>📚</span> Matched Courses</a>
+
+    <div class="sb-group-label">ACCOUNT</div>
+    <a href="profile.html" class="sb-link"><span>👤</span> Profile Details</a>
+    <button class="sb-link sb-signout" onclick="signOut()"><span>🚪</span> Sign Out</button>
+  </nav>
+
+  <div class="sb-footer">
+    <div class="sb-user-name" id="sbUserName">User</div>
+    <div class="sb-user-role" id="sbUserRole">Statistical Service</div>
+  </div>
+</aside>
+
+<footer class="appfoot"></footer>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -473,3 +473,214 @@
   .lp-landing footer.lp-footer .flinks a{ font-size:13px; font-weight:600; text-decoration:none; color:var(--slate); cursor:pointer; background:none; border:none; font-family:'Work Sans',sans-serif; }
   .lp-landing footer.lp-footer .flinks a:hover{ color:var(--ink); }
   .lp-landing footer.lp-footer .fnote{ margin-top:28px; font-size:11px; color:var(--slate); font-family:'IBM Plex Mono',monospace; }
+
+  /* ---------- Hamburger Button ---------- */
+.nav-hamburger {
+  width: 38px;
+  height: 38px;
+  border: 1.5px solid var(--line);
+  background: var(--card);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+}
+.nav-hamburger span {
+  width: 18px;
+  height: 2px;
+  background: var(--ink);
+  border-radius: 1px;
+}
+
+/* ---------- Backdrop ---------- */
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 24, 31, 0.4);
+  backdrop-filter: blur(2px);
+  z-index: 99;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.sidebar-backdrop.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ---------- Drawer Panel ---------- */
+.app-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 290px;
+  background: var(--card);
+  border-right: 1.5px solid var(--line);
+  z-index: 100;
+  transform: translateX(-100%);
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 18px;
+  box-shadow: 10px 0 30px -10px rgba(18, 24, 31, 0.2);
+}
+.app-sidebar.open {
+  transform: translateX(0);
+}
+
+.sb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 16px;
+  border-bottom: 1px dashed var(--line);
+}
+.sb-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--slate);
+  line-height: 1;
+}
+
+.sb-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 18px;
+  flex: 1;
+  overflow-y: auto;
+}
+.sb-group-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--slate);
+  letter-spacing: 0.08em;
+  margin: 14px 8px 6px;
+}
+.sb-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  font-family: 'Work Sans', sans-serif;
+  text-align: left;
+}
+.sb-link:hover {
+  background: var(--paper);
+  border-color: var(--line);
+}
+.sb-link.active {
+  background: var(--amber-soft);
+  border-color: var(--amber);
+}
+.sb-signout {
+  color: var(--brick);
+  margin-top: 6px;
+}
+
+.sb-footer {
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+}
+.sb-user-name {
+  font-size: 13px;
+  font-weight: 700;
+}
+.sb-user-role {
+  font-size: 11px;
+  color: var(--slate);
+  font-family: 'IBM Plex Mono', monospace;
+  margin-top: 2px;
+}
+
+/* ---------- rectangular interactive dashboard tabs ---------- */
+.interactive-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 24px;
+  width: 100%;
+}
+.tab-card-btn {
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-bottom: 3px solid var(--line);
+  border-radius: 8px;
+  padding: 14px 16px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  transition: all 0.15s ease;
+  font-family: 'Work Sans', sans-serif;
+}
+.tab-card-btn:hover {
+  border-color: var(--slate);
+  transform: translateY(-2px);
+}
+.tab-card-btn.active {
+  border-color: var(--ink);
+  border-bottom-color: var(--amber);
+  background: #fff;
+  box-shadow: 0 6px 18px -6px rgba(18, 24, 31, 0.15);
+}
+.tab-card-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  background: var(--paper);
+  color: var(--slate);
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+.tab-card-btn.active .tab-card-badge {
+  background: var(--amber-soft);
+  color: #7A5E14;
+}
+.tab-card-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.tab-card-sub {
+  font-size: 12px;
+  color: var(--slate);
+  margin-top: 3px;
+}
+
+/* center alignment for metric cards */
+.ledger.metrics-banner {
+  max-width: 620px;
+  width: 100%;
+  margin: 18px auto 0;
+}
+
+@media (max-width: 650px) {
+  .interactive-tabs {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+/* Dashboard needs a wider container than the rest of the (mostly
+   single-column, form-driven) site — scoped here instead of changing
+   the shared .wrap rule everyone else relies on. */
+#screen-dashboard .wrap { max-width: 880px; }

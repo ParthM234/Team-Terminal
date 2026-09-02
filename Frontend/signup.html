@@ -87,14 +87,18 @@
 
         <div class="field">
           <label for="f-ministry">Ministry / Department</label>
-          <input type="text" id="f-ministry" placeholder="e.g. Ministry of Statistics &amp; PI">
-          <div class="errmsg" id="err-ministry">Please enter your ministry or department.</div>
+          <select id="f-ministry">
+            <option value="">Loading ministries…</option>
+          </select>
+          <div class="errmsg" id="err-ministry">Please select your ministry or department.</div>
         </div>
 
         <div class="field">
-          <label for="f-desig">Designation</label>
-          <input type="text" id="f-desig" placeholder="e.g. Statistical Officer">
-          <div class="errmsg" id="err-desig">Please enter your designation.</div>
+          <label for="f-desig">Designation / Job role</label>
+          <select id="f-desig">
+            <option value="">Loading job roles…</option>
+          </select>
+          <div class="errmsg" id="err-desig">Please select your designation.</div>
         </div>
 
         <div class="field">
@@ -214,7 +218,7 @@
       <p class="lede">Your account is ready, <span class="mono" id="thanks-name">there</span>. Let's get you matched to the right learning.</p>
 
       <div class="stack" style="width:100%; max-width:320px; margin-top:30px;">
-        <button class="btn btn-solid" onclick="goScreen('role')">Continue</button>
+        <button class="btn btn-solid" onclick="goScreen('dashboard')">Continue</button>
       </div>
     </div>
   </section>
@@ -231,6 +235,7 @@
     <button onclick="jump('landing')">0 · Landing</button>
     <button onclick="jump('login')">1 · Login</button>
     <button onclick="jump('signup-1')">1b · Sign up</button>
+    <button onclick="jump('dashboard')">1c · Dashboard</button>
     <button onclick="jump('role')">2 · Pick role</button>
     <button onclick="jump('upload')">3 · Upload material</button>
     <button onclick="jump('spin')">4 · Scoring</button>
@@ -242,6 +247,7 @@
   </div>
   <button onclick="toggleDemoMenu()" aria-label="Jump to screen">::</button>
 </div>
+
 
 <footer class="appfoot"></footer>
 
