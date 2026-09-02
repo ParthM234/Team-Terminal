@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quick quiz — Sankhya Setu</title>
+<meta name="description" content="Sankhya Setu reads what your role needs, runs a short quiz to find your gaps, and routes you straight to the right course on iGOT Karmayogi.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</head>
+<body data-screen="quiz">
+
+<div class="bg-glow" aria-hidden="true"></div>
+
+<div id="app">
+  <section class="screen active" id="screen-quiz">
+    <div class="wrap">
+      <div class="tally"><div class="stroke"></div><div class="stroke on"></div><div class="stroke"></div><div class="stroke"></div></div>
+      <div class="eyebrow" id="quiz-context">Diagnostic quiz</div>
+      <h1 style="margin-top:8px;">Let's check one thing</h1>
+
+      <div class="ledger" style="margin-top:22px;">
+        <div class="ledger-tab">Q1 / 5</div>
+        <div class="qmeta">Sampling</div>
+        <div class="qtext">A survey needs to reflect a state's mix of urban and rural households fairly. Which sampling method fits best?</div>
+
+        <button class="opt" data-correct="false" onclick="answerQuiz(this,false)"><span class="sq"></span>Simple Random Sampling</button>
+        <button class="opt" data-correct="true" onclick="answerQuiz(this,true)"><span class="sq"></span>Stratified Sampling</button>
+        <button class="opt" data-correct="false" onclick="answerQuiz(this,false)"><span class="sq"></span>Convenience Sampling</button>
+
+        <div class="feedback" id="quiz-feedback"></div>
+      </div>
+
+      <div class="spacer"></div>
+      <div class="stack">
+        <button class="btn btn-solid" id="quiz-next" onclick="finishQuiz()" disabled>See my results</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="profile-fab" id="profileFab" title="Your profile" style="display:none;">
+  <span id="fabInitials">--</span>
+  <img id="fabImg" style="display:none;" alt="">
+</div>
+
+<div class="demo-jump">
+  <div class="demo-menu" id="demoMenu">
+    <div class="lbl">Jump to screen (demo)</div>
+    <button onclick="jump('landing')">0 · Landing</button>
+    <button onclick="jump('login')">1 · Login</button>
+    <button onclick="jump('signup-1')">1b · Sign up</button>
+    <button onclick="jump('role')">2 · Pick role</button>
+    <button onclick="jump('upload')">3 · Upload material</button>
+    <button onclick="jump('spin')">4 · Scoring</button>
+    <button onclick="jump('quiz')">5 · Quiz</button>
+    <button onclick="jump('results')">6 · Results</button>
+    <button onclick="jump('practice')">7 · Learn</button>
+    <button onclick="jump('progress')">8 · Progress</button>
+    <button onclick="jump('profile')">9 · Profile</button>
+  </div>
+  <button onclick="toggleDemoMenu()" aria-label="Jump to screen">::</button>
+</div>
+
+<footer class="appfoot"></footer>
+
+<script src="app.js"></script>
+</body>
+</html>

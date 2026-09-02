@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your results — Sankhya Setu</title>
+<meta name="description" content="Sankhya Setu reads what your role needs, runs a short quiz to find your gaps, and routes you straight to the right course on iGOT Karmayogi.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</head>
+<body data-screen="results">
+
+<div class="bg-glow" aria-hidden="true"></div>
+
+<div id="app">
+  <section class="screen active" id="screen-results">
+    <div class="wrap">
+      <div class="tally"><div class="stroke"></div><div class="stroke"></div><div class="stroke on"></div><div class="stroke"></div></div>
+      <h1>Here's where you stand</h1>
+
+      <div class="meter-wrap">
+        <div class="meter-num" id="meter-num">0%</div>
+        <div class="meter-lab">Ready for your role</div>
+        <div class="meter-track">
+          <div class="meter-seg"><i id="seg1"></i></div>
+          <div class="meter-seg"><i id="seg2"></i></div>
+          <div class="meter-seg"><i id="seg3"></i></div>
+          <div class="meter-seg"><i id="seg4"></i></div>
+          <div class="meter-seg"><i id="seg5"></i></div>
+        </div>
+      </div>
+
+      <div class="plain-msg">
+        <b>You're strongest in Statistical Analysis.</b>
+        <span>Focus on Sampling and Data Visualization next — that's where the gap is biggest.</span>
+      </div>
+
+      <div class="ledger-list">
+        <div class="lrow rise" style="animation-delay:.05s"><span class="sq2" style="background:var(--brick);"></span><span class="lname">Sampling</span><span class="dots"></span><span class="lval">40%</span><span class="ltag">NEEDS WORK</span></div>
+        <div class="lrow rise" style="animation-delay:.1s"><span class="sq2" style="background:var(--brick);"></span><span class="lname">Data Visualization</span><span class="dots"></span><span class="lval">45%</span><span class="ltag">NEEDS WORK</span></div>
+        <div class="lrow rise" style="animation-delay:.15s"><span class="sq2" style="background:var(--amber);"></span><span class="lname">Data Quality</span><span class="dots"></span><span class="lval">60%</span><span class="ltag">GETTING THERE</span></div>
+        <div class="lrow rise" style="animation-delay:.2s"><span class="sq2" style="background:var(--teal);"></span><span class="lname">Survey Methodology</span><span class="dots"></span><span class="lval">70%</span><span class="ltag">SOLID</span></div>
+        <div class="lrow rise" style="animation-delay:.25s"><span class="sq2" style="background:var(--teal);"></span><span class="lname">Statistical Analysis</span><span class="dots"></span><span class="lval">85%</span><span class="ltag">STRONG</span></div>
+      </div>
+
+      <div class="spacer"></div>
+      <div class="stack">
+        <button class="btn btn-solid" onclick="goScreen('practice')">See what to learn</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="profile-fab" id="profileFab" title="Your profile" style="display:none;">
+  <span id="fabInitials">--</span>
+  <img id="fabImg" style="display:none;" alt="">
+</div>
+
+<div class="demo-jump">
+  <div class="demo-menu" id="demoMenu">
+    <div class="lbl">Jump to screen (demo)</div>
+    <button onclick="jump('landing')">0 · Landing</button>
+    <button onclick="jump('login')">1 · Login</button>
+    <button onclick="jump('signup-1')">1b · Sign up</button>
+    <button onclick="jump('role')">2 · Pick role</button>
+    <button onclick="jump('upload')">3 · Upload material</button>
+    <button onclick="jump('spin')">4 · Scoring</button>
+    <button onclick="jump('quiz')">5 · Quiz</button>
+    <button onclick="jump('results')">6 · Results</button>
+    <button onclick="jump('practice')">7 · Learn</button>
+    <button onclick="jump('progress')">8 · Progress</button>
+    <button onclick="jump('profile')">9 · Profile</button>
+  </div>
+  <button onclick="toggleDemoMenu()" aria-label="Jump to screen">::</button>
+</div>
+
+<footer class="appfoot"></footer>
+
+<script src="app.js"></script>
+</body>
+</html>
