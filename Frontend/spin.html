@@ -29,9 +29,18 @@
   <section class="screen active" id="screen-spin">
     <div class="wrap" style="justify-content:center; align-items:center; text-align:center;">
       <div class="tally"><div class="stroke"></div><div class="stroke on"></div><div class="stroke"></div><div class="stroke"></div></div>
-      <div class="spin-mark" id="spinMark"></div>
-      <h1 style="margin-top:0;" id="spin-title">Building your quiz…</h1>
-      <p class="lede" id="spin-sub">5 quick questions per skill area. AI checks not just what you answered, but why.</p>
+      <div id="spin-loading">
+        <div class="spin-mark" id="spinMark"></div>
+        <h1 style="margin-top:0;" id="spin-title">Building your quiz…</h1>
+        <p class="lede" id="spin-sub">5 quick questions per skill area. AI checks not just what you answered, but why.</p>
+      </div>
+      <div id="spin-error" style="display:none;">
+        <h1 style="margin-top:0;">Something went wrong</h1>
+        <p class="lede" id="spin-error-message">The quiz couldn't be generated. Please try again.</p>
+        <div class="stack" style="margin-top:20px;">
+          <button class="btn btn-solid" onclick="goScreen('dashboard')">Back to dashboard</button>
+        </div>
+      </div>
     </div>
   </section>
 </div>

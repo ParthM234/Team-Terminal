@@ -32,21 +32,30 @@
       <h1>Start here</h1>
       <p class="lede">Matched to your biggest gap first.</p>
 
-      <div class="ledger course-card" id="course-card">
-        <div class="num">01 / RECOMMENDED</div>
-        <h3 id="course-title">Foundations of Sampling Design</h3>
-        <p>4 short lessons · about 1 hour · on iGOT Karmayogi</p>
-        <span class="course-tag">FIXES: SAMPLING</span>
+      <div id="practice-loading" style="text-align:center; padding:24px 0; color:var(--slate);">Finding your best next course…</div>
+
+      <div id="practice-empty" style="display:none; text-align:center; padding:32px 14px; background:var(--card); border:1px dashed var(--line); border-radius:8px; margin-top:12px;">
+        <h3 style="font-size:16px; font-weight:700; font-family:'Space Grotesk',sans-serif;">You're fully caught up</h3>
+        <p style="font-size:13px; color:var(--slate); margin-top:6px; line-height:1.5;">No open gaps against your role right now — nothing to recommend. Take a fresh quiz later to check for changes.</p>
       </div>
 
-      <div class="swap">
-        <button class="btn-text" onclick="nextCourse()">Show a different course &rarr;</button>
-      </div>
+      <div id="practice-content" style="display:none;">
+        <div class="ledger course-card" id="course-card">
+          <div class="num" id="course-num">01 / RECOMMENDED</div>
+          <h3 id="course-title">Course title</h3>
+          <p id="course-meta">Description</p>
+          <span class="course-tag" id="course-tag">FIXES: SKILL</span>
+        </div>
 
-      <div class="spacer"></div>
-      <div class="stack">
-        <button class="btn btn-amber" onclick="goScreen('progress')">Start learning</button>
-        <button class="btn-ghost" onclick="goScreen('results')" style="margin:0 auto;">&larr; Back to my results</button>
+        <div class="swap">
+          <button class="btn-text" onclick="nextCourse()">Show a different course &rarr;</button>
+        </div>
+
+        <div class="spacer"></div>
+        <div class="stack">
+          <button class="btn btn-amber" id="course-open-link" onclick="openCurrentCourse()">Start learning</button>
+          <button class="btn-ghost" onclick="goScreen('results')" style="margin:0 auto;">&larr; Back to my results</button>
+        </div>
       </div>
     </div>
   </section>

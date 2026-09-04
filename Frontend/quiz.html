@@ -30,23 +30,21 @@
     <div class="wrap">
       <div class="tally"><div class="stroke"></div><div class="stroke on"></div><div class="stroke"></div><div class="stroke"></div></div>
       <div class="eyebrow" id="quiz-context">Diagnostic quiz</div>
-      <h1 style="margin-top:8px;">Let's check one thing</h1>
+      <h1 style="margin-top:8px;">Quick skills check</h1>
 
       <div class="ledger" style="margin-top:22px;">
-        <div class="ledger-tab">Q1 / 5</div>
-        <div class="qmeta">Sampling</div>
-        <div class="qtext">A survey needs to reflect a state's mix of urban and rural households fairly. Which sampling method fits best?</div>
+        <div class="ledger-tab" id="quiz-tab">Q1 / 20</div>
+        <div class="qmeta" id="quiz-skill">Skill</div>
+        <div class="qtext" id="quiz-question">Loading question…</div>
 
-        <button class="opt" data-correct="false" onclick="answerQuiz(this,false)"><span class="sq"></span>Simple Random Sampling</button>
-        <button class="opt" data-correct="true" onclick="answerQuiz(this,true)"><span class="sq"></span>Stratified Sampling</button>
-        <button class="opt" data-correct="false" onclick="answerQuiz(this,false)"><span class="sq"></span>Convenience Sampling</button>
+        <div id="quiz-options"></div>
 
         <div class="feedback" id="quiz-feedback"></div>
       </div>
 
       <div class="spacer"></div>
       <div class="stack">
-        <button class="btn btn-solid" id="quiz-next" onclick="finishQuiz()" disabled>See my results</button>
+        <button class="btn btn-solid" id="quiz-next" onclick="nextQuestion()" disabled>Next question</button>
       </div>
     </div>
   </section>

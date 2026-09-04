@@ -25,6 +25,10 @@ const SUPABASE_URL = 'https://hvkkwapsnmaalcqzmyfh.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_28mh4OF6mfGsqN2eyrtH7w_EgliBmqw';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
+// The Python/LangChain quiz-generation backend (main.py). Currently
+// only running locally — update this once it's actually deployed.
+const BACKEND_URL = 'http://localhost:8000';
+
 // ---------- cross-page navigation ----------
 // The signup wizard's 6 steps live in ONE file (signup.html), so any
 // goScreen('signup-…') call — e.g. the "Create an account" link on the
@@ -97,6 +101,7 @@ async function initPage() {
       .single();
 
     currentUser = {
+      id: session.user.id,
       name: profile?.full_name || '',
       email: session.user.email || '',
       ministry: profile?.ministries?.name || '',
@@ -153,43 +158,38 @@ async function initPage() {
   }
 
   if (screen === 'results') {
-    setTimeout(animateMeter, 150);
+    renderResults();
+  }
+
+  if (screen === 'practice') {
+    loadRecommendedCourses();
   }
 
   if (screen === 'spin') {
     const params = new URLSearchParams(location.search);
     const step = params.get('step') || 'building';
     const source = params.get('source') || 'role';
-    const titleEl = document.getElementById('spin-title');
-    const subEl = document.getElementById('spin-sub');
+
     if (step === 'scoring') {
-      titleEl.textContent = 'Scoring your answers…';
-      subEl.textContent = 'Matching results against what your role requires.';
-      setTimeout(() => { window.location.href = 'results.html'; }, 1200);
+      document.getElementById('spin-title').textContent = 'Scoring your answers…';
+      document.getElementById('spin-sub').textContent = 'Matching results against what your role requires.';
+      runSubmitQuiz();
     } else {
-      if (source === 'material') {
-        titleEl.textContent = 'Reading your material…';
-        subEl.textContent = 'Pulling out the concepts that matter and turning them into questions.';
-      } else if (source === 'reassess') {
-        titleEl.textContent = 'Preparing a fresh set…';
-        subEl.textContent = 'New questions on the same skill — not the ones you just saw.';
-      } else {
-        titleEl.textContent = 'Building your quiz…';
-        subEl.textContent = '5 quick questions per skill area. AI checks not just what you answered, but why.';
+      if (source !== 'role') {
+        // Only the standard role-based quiz is wired up right now —
+        // upload/reassess navigate here but there's no backend support
+        // for them yet, so fail clearly rather than pretend to work.
+        showSpinError("This quiz type isn't available yet — only the standard quiz works right now.");
+        return;
       }
-      setTimeout(() => { window.location.href = 'quiz.html?source=' + encodeURIComponent(source); }, 1300);
+      document.getElementById('spin-title').textContent = 'Building your quiz…';
+      document.getElementById('spin-sub').textContent = '20 quick questions across your role\'s key skills, generated just for you.';
+      runGenerateQuiz();
     }
   }
 
   if (screen === 'quiz') {
-    const source = new URLSearchParams(location.search).get('source') || 'role';
-    const ctxEl = document.getElementById('quiz-context');
-    if (ctxEl) {
-      ctxEl.textContent = source === 'material' ? 'Quiz generated from your material'
-        : source === 'reassess' ? 'Re-assessment quiz'
-        : 'Diagnostic quiz';
-    }
-    resetQuiz();
+    loadQuizData();
   }
 
   if (screen === 'signup-success-redirect-name') {
@@ -419,75 +419,305 @@ function showFilePicked(name) {
 
 // ---- quiz flow entry point (called from role.html, upload.html, progress.html) ----
 // Used to configure the spin/quiz screens directly via DOM writes; now it
-// just navigates, and spin.html + quiz.html configure themselves from the
-// ?source= query param in initPage() above.
+// just navigates; spin.html now makes the actual backend calls and
+// hands data to the next page via sessionStorage (20 questions is too
+// much to pass through a URL, which is how every other page-to-page
+// handoff in this site works).
 function startQuiz(source) {
+  if (source !== 'role') {
+    alert("This quiz type isn't available yet — only the standard quiz works right now.");
+    return;
+  }
   window.location.href = 'spin.html?source=' + encodeURIComponent(source);
 }
-function resetQuiz() {
-  document.querySelectorAll('.opt').forEach(o => { o.classList.remove('correct', 'wrong'); o.disabled = false; });
+
+function showSpinError(message) {
+  document.getElementById('spin-loading').style.display = 'none';
+  const errBox = document.getElementById('spin-error');
+  document.getElementById('spin-error-message').textContent = message;
+  errBox.style.display = 'block';
+}
+
+async function runGenerateQuiz() {
+  if (!currentUser || !currentUser.id) {
+    showSpinError('You need to be signed in to take a quiz.');
+    return;
+  }
+  try {
+    const res = await fetch(BACKEND_URL + '/generate-quiz', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profile_id: currentUser.id })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.detail || 'The quiz could not be generated.');
+    }
+    sessionStorage.setItem('quizData', JSON.stringify(data));
+    window.location.href = 'quiz.html';
+  } catch (err) {
+    console.error('generate-quiz failed:', err);
+    showSpinError(err.message || 'Could not reach the quiz backend. Is it running?');
+  }
+}
+
+async function runSubmitQuiz() {
+  const raw = sessionStorage.getItem('quizSubmission');
+  if (!raw) {
+    showSpinError('Your quiz answers were lost. Please retake the quiz.');
+    return;
+  }
+  const submission = JSON.parse(raw);
+  try {
+    const res = await fetch(BACKEND_URL + '/submit-quiz', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(submission)
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.detail || 'The quiz could not be scored.');
+    }
+    sessionStorage.setItem('quizResults', JSON.stringify(data));
+    sessionStorage.removeItem('quizData');
+    sessionStorage.removeItem('quizSubmission');
+    window.location.href = 'results.html';
+  } catch (err) {
+    console.error('submit-quiz failed:', err);
+    showSpinError(err.message || 'Could not reach the quiz backend. Is it running?');
+  }
+}
+
+// ---- quiz-taking (quiz.html only) ----
+let quizData = null;
+let quizQuestionIndex = 0;
+let quizCollectedAnswers = [];
+let quizSelectedOption = null;
+
+function loadQuizData() {
+  const raw = sessionStorage.getItem('quizData');
+  if (!raw) {
+    // Nobody generated a quiz for this session — send them back rather
+    // than show a broken empty page.
+    window.location.href = 'role.html';
+    return;
+  }
+  quizData = JSON.parse(raw);
+  quizQuestionIndex = 0;
+  quizCollectedAnswers = [];
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const total = quizData.questions.length;
+  const q = quizData.questions[quizQuestionIndex];
+  quizSelectedOption = null;
+
+  document.getElementById('quiz-tab').textContent = `Q${quizQuestionIndex + 1} / ${total}`;
+  document.getElementById('quiz-skill').textContent = q.skill;
+  document.getElementById('quiz-question').textContent = q.question;
+
+  const optionsEl = document.getElementById('quiz-options');
+  optionsEl.innerHTML = '';
+  q.options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'opt';
+    btn.innerHTML = '<span class="sq"></span>' + opt;
+    btn.onclick = () => selectOption(btn, opt);
+    optionsEl.appendChild(btn);
+  });
+
   const fb = document.getElementById('quiz-feedback');
   fb.classList.remove('show', 'good', 'bad');
-  document.getElementById('quiz-next').disabled = true;
+  fb.textContent = '';
+
+  const nextBtn = document.getElementById('quiz-next');
+  nextBtn.disabled = true;
+  nextBtn.textContent = (quizQuestionIndex === total - 1) ? 'See my results' : 'Next question';
 }
-function answerQuiz(btn, isCorrect) {
-  document.querySelectorAll('.opt').forEach(o => o.disabled = true);
-  btn.classList.add(isCorrect ? 'correct' : 'wrong');
-  if (!isCorrect) {
-    document.querySelectorAll('.opt').forEach(o => { if (o.dataset.correct === 'true') o.classList.add('correct'); });
-  }
-  const fb = document.getElementById('quiz-feedback');
-  fb.classList.add('show', isCorrect ? 'good' : 'bad');
-  fb.innerHTML = isCorrect
-    ? '<b>Right.</b>Stratified Sampling splits the population into groups first, so every region gets fair representation.'
-    : '<b>Not quite.</b>Stratified Sampling is the fit here — it guarantees every region is represented, which random or convenience sampling can\'t promise.';
+
+function selectOption(btn, optionText) {
+  // Deliberately no right/wrong feedback here — the correct answer
+  // stays server-side until the whole quiz is submitted and scored,
+  // so someone can't just read the feedback to game the assessment.
+  document.querySelectorAll('#quiz-options .opt').forEach(o => o.classList.remove('selected'));
+  btn.classList.add('selected');
+  quizSelectedOption = optionText;
   document.getElementById('quiz-next').disabled = false;
 }
-function finishQuiz() {
-  window.location.href = 'spin.html?step=scoring';
+
+function nextQuestion() {
+  const q = quizData.questions[quizQuestionIndex];
+  quizCollectedAnswers.push({ question_id: q.id, selected_option: quizSelectedOption });
+
+  if (quizQuestionIndex < quizData.questions.length - 1) {
+    quizQuestionIndex++;
+    renderQuestion();
+  } else {
+    sessionStorage.setItem('quizSubmission', JSON.stringify({
+      attempt_id: quizData.attempt_id,
+      answers: quizCollectedAnswers
+    }));
+    window.location.href = 'spin.html?step=scoring';
+  }
 }
 
-function animateMeter() {
-  const target = 60;
+// ---- results (results.html only) ----
+function skillTier(scorePercent) {
+  if (scorePercent >= 80) return { tag: 'STRONG', color: 'var(--teal)' };
+  if (scorePercent >= 65) return { tag: 'SOLID', color: 'var(--teal)' };
+  if (scorePercent >= 50) return { tag: 'GETTING THERE', color: 'var(--amber)' };
+  return { tag: 'NEEDS WORK', color: 'var(--brick)' };
+}
+
+function renderResults() {
+  const raw = sessionStorage.getItem('quizResults');
+  if (!raw) {
+    window.location.href = 'dashboard.html';
+    return;
+  }
+  const results = JSON.parse(raw);
   quizTaken = true;
-  readinessScore = target;
+  readinessScore = Math.round(results.overall_score_percent);
+
   const numEl = document.getElementById('meter-num');
-  const filled = Math.round(target / 20);
+  const filled = Math.round(results.overall_score_percent / 20);
   for (let i = 1; i <= 5; i++) {
     const seg = document.getElementById('seg' + i);
-    seg.style.width = (i <= filled) ? '100%' : (i === filled + 1 ? ((target % 20) / 20 * 100) + '%' : '0%');
+    seg.style.width = (i <= filled) ? '100%' : '0%';
   }
-  const start = performance.now();
-  const duration = 900;
-  function tick(now) {
-    const p = Math.min(1, (now - start) / duration);
-    numEl.textContent = Math.round(target * p) + '%';
-    if (p < 1) requestAnimationFrame(tick);
+  let n = 0;
+  const target = Math.round(results.overall_score_percent);
+  const t = setInterval(() => {
+    n += 2;
+    if (n >= target) { n = target; clearInterval(t); }
+    numEl.textContent = n + '%';
+  }, 22);
+
+  const sorted = [...results.skills].sort((a, b) => b.score_percent - a.score_percent);
+  const strongest = sorted[0];
+  const weakest = sorted.slice(-2).map(s => s.skill);
+  const msgEl = document.getElementById('results-message');
+  if (strongest) {
+    msgEl.querySelector('b').textContent = `You're strongest in ${strongest.skill}.`;
+    msgEl.querySelector('span').textContent = weakest.length
+      ? `Focus on ${weakest.join(' and ')} next — that's where the gap is biggest.`
+      : '';
   }
-  requestAnimationFrame(tick);
+
+  const listEl = document.getElementById('results-list');
+  listEl.innerHTML = '';
+  sorted.forEach((s, i) => {
+    const tier = skillTier(s.score_percent);
+    const row = document.createElement('div');
+    row.className = 'lrow rise';
+    row.style.animationDelay = (i * 0.05) + 's';
+    row.innerHTML = `<span class="sq2" style="background:${tier.color};"></span><span class="lname">${s.skill}</span><span class="dots"></span><span class="lval">${Math.round(s.score_percent)}%</span><span class="ltag">${tier.tag}</span>`;
+    listEl.appendChild(row);
+  });
 }
 
-// ---- practice swap (practice.html only) ----
-const practiceCourses = [
-  { title: 'Foundations of Sampling Design', meta: '4 short lessons · about 1 hour · on iGOT Karmayogi', tag: 'FIXES: SAMPLING' },
-  { title: 'Data Visualization for Reports', meta: '3 short lessons · 45 minutes · on iGOT Karmayogi', tag: 'FIXES: DATA VISUALIZATION' },
-  { title: 'Data Quality Checks in the Field', meta: '2 short lessons · 30 minutes · on iGOT Karmayogi', tag: 'FIXES: DATA QUALITY' }
-];
-let ci = 0;
+// ---- practice: real course recommendations from skill_gaps (practice.html only) ----
+let recommendedCourses = [];
+let recommendedIndex = 0;
+
+async function loadRecommendedCourses() {
+  const loadingEl = document.getElementById('practice-loading');
+  const emptyEl = document.getElementById('practice-empty');
+  const contentEl = document.getElementById('practice-content');
+
+  if (!currentUser || !currentUser.id) {
+    loadingEl.textContent = 'Sign in to see your recommendations.';
+    return;
+  }
+
+  // Worst gap first — this is the single source of truth for "where is
+  // this person behind," computed by the skill_gaps view from their
+  // latest quiz scores vs. their role's required levels.
+  const { data: gaps, error: gapsError } = await supabaseClient
+    .from('skill_gaps')
+    .select('skill_id, skill_name, gap')
+    .eq('profile_id', currentUser.id)
+    .gt('gap', 0)
+    .order('gap', { ascending: false });
+
+  if (gapsError) {
+    console.error('Failed to load skill gaps:', gapsError);
+    loadingEl.textContent = "Couldn't load your recommendations right now.";
+    return;
+  }
+
+  if (!gaps || gaps.length === 0) {
+    loadingEl.style.display = 'none';
+    emptyEl.style.display = 'block';
+    return;
+  }
+
+  const skillIds = gaps.map(g => g.skill_id);
+  const { data: courseLinks, error: coursesError } = await supabaseClient
+    .from('course_skills')
+    .select('skill_id, courses(id, title, description, igot_link)')
+    .in('skill_id', skillIds);
+
+  if (coursesError || !courseLinks || courseLinks.length === 0) {
+    console.error('Failed to load matching courses:', coursesError);
+    loadingEl.style.display = 'none';
+    emptyEl.style.display = 'block';
+    emptyEl.querySelector('h3').textContent = 'No matching courses yet';
+    emptyEl.querySelector('p').textContent = 'You have open gaps, but no course in the catalog covers them yet.';
+    return;
+  }
+
+  // Order courses by how bad the gap is for the skill they address —
+  // a course fixing your worst gap should show up first.
+  const gapBySkillId = Object.fromEntries(gaps.map(g => [g.skill_id, g]));
+  recommendedCourses = courseLinks
+    .filter(link => link.courses)
+    .map(link => ({
+      title: link.courses.title,
+      description: link.courses.description || '',
+      igot_link: link.courses.igot_link || '',
+      skill_name: gapBySkillId[link.skill_id]?.skill_name || '',
+      gap: gapBySkillId[link.skill_id]?.gap || 0
+    }))
+    .sort((a, b) => b.gap - a.gap);
+
+  recommendedIndex = 0;
+  loadingEl.style.display = 'none';
+  contentEl.style.display = 'block';
+  renderRecommendedCourse();
+}
+
+function renderRecommendedCourse() {
+  const c = recommendedCourses[recommendedIndex];
+  document.getElementById('course-num').textContent = `${recommendedIndex + 1} / RECOMMENDED (${recommendedCourses.length})`;
+  document.getElementById('course-title').textContent = c.title;
+  document.getElementById('course-meta').textContent = c.description || 'On iGOT Karmayogi';
+  document.getElementById('course-tag').textContent = 'FIXES: ' + c.skill_name.toUpperCase();
+}
+
 function nextCourse() {
-  ci = (ci + 1) % practiceCourses.length;
-  const c = practiceCourses[ci];
+  if (recommendedCourses.length === 0) return;
+  recommendedIndex = (recommendedIndex + 1) % recommendedCourses.length;
   const card = document.getElementById('course-card');
   card.style.opacity = '0';
   card.style.transform = 'translateY(5px)';
   card.style.transition = 'opacity .15s ease, transform .15s ease';
   setTimeout(() => {
-    document.getElementById('course-title').textContent = c.title;
-    document.querySelector('#course-card p').textContent = c.meta;
-    document.querySelector('.course-tag').textContent = c.tag;
+    renderRecommendedCourse();
     card.style.opacity = '1';
     card.style.transform = 'translateY(0)';
   }, 160);
+}
+
+function openCurrentCourse() {
+  const c = recommendedCourses[recommendedIndex];
+  if (c && c.igot_link) {
+    window.open(c.igot_link, '_blank');
+  } else {
+    goScreen('progress');
+  }
 }
 
 // ============================================================

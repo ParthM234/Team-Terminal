@@ -158,6 +158,8 @@
   .opt.correct .sq{ background:var(--teal); border-color:var(--teal); }
   .opt.wrong{ border-color:var(--brick); background:var(--brick-soft); }
   .opt.wrong .sq{ background:var(--brick); border-color:var(--brick); }
+  .opt.selected{ border-color:var(--ink); background:var(--card); }
+  .opt.selected .sq{ background:var(--ink); border-color:var(--ink); }
   .opt[disabled]{ cursor:default; }
   .feedback{ display:none; margin-top:13px; padding:12px 14px; border-radius:6px; font-size:13px; line-height:1.55; border-left:3px solid; }
   .feedback.show{ display:block; animation:rise .3s ease both; }
