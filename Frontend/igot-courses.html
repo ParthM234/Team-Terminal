@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Upload material — Sankhya Setu</title>
+<title>Recommended Courses — Sankhya Setu</title>
 <meta name="description" content="Sankhya Setu reads what your role needs, runs a short quiz to find your gaps, and routes you straight to the right course on iGOT Karmayogi.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 </head>
-<body data-screen="upload">
+<body data-screen="igot-courses">
 
 <div class="bg-glow" aria-hidden="true"></div>
 
@@ -26,57 +26,36 @@
     </div>
   </div>
 <div id="app">
-  <section class="screen active" id="screen-upload">
+  <section class="screen active" id="screen-igot-courses">
     <div class="wrap">
-      <div class="tally"><div class="stroke on"></div><div class="stroke"></div><div class="stroke"></div><div class="stroke"></div></div>
-
-      <div id="upload-picker">
-        <h1>Upload material instead</h1>
-        <p class="lede">We'll read it and build a quiz from what's actually inside it.</p>
-
-        <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
-          <div class="up-ic">↑</div>
-          <h3>Tap to choose a PDF</h3>
-          <p>or drag it in here</p>
-          <div class="fmt-row">
-            <span class="fmt-chip">PDF</span>
-          </div>
-          <input type="file" id="fileInput" accept="application/pdf" style="display:none;" onchange="filePicked(this)">
-        </div>
-
-        <div class="file-picked" id="filePicked">
-          <div class="fi">PDF</div>
-          <div>
-            <div class="fn" id="fileName">Survey_Methodology_Notes.pdf</div>
-            <div class="fs">Ready to scan</div>
-          </div>
-        </div>
-
-        <div class="field" style="margin-top:8px;">
-          <p class="errmsg" id="upload-file-error"></p>
-        </div>
-
-        <div class="spacer"></div>
-        <div class="stack">
-          <button class="btn btn-solid" id="upload-continue" onclick="uploadAndGenerateQuiz()" disabled>Generate my quiz</button>
-          <button class="btn-ghost" onclick="goScreen('role')" style="margin:0 auto;">&larr; Back to role selection</button>
-        </div>
+      
+      <div style="margin-top:16px;">
+        <a href="dashboard.html" style="font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; color:var(--slate); text-decoration:none; font-weight:700;">&larr; Back to Dashboard</a>
       </div>
 
-      <div id="upload-loading" style="display:none; text-align:center; padding-top:40px;">
-        <div class="spin-mark" id="uploadSpinMark"></div>
-        <h1 style="margin-top:0;">Reading your material…</h1>
-        <p class="lede" id="upload-loading-sub">Matching it against each skill your role requires. This checks several skills one at a time, so it can take a little while for longer documents.</p>
+      <div class="eyebrow" style="margin-top:16px;">TARGETED CURRICULUM</div>
+      <h1 style="margin-top:6px;">iGOT Recommended Courses</h1>
+      <p class="lede" style="margin-top:4px;">Direct enrollments matched to address your quiz diagnostic gaps.</p>
+
+      <!-- External Portal Notice -->
+      <div class="plain-msg" style="margin-top:16px;">
+        <b>Direct sync with Karmayogi Bharat.</b>
+        <span>Completing any course below automatically flags your account for a follow-up mini reassessment.</span>
       </div>
 
-      <div id="upload-error" style="display:none; text-align:center; padding-top:40px;">
-        <h1 style="margin-top:0;">Couldn't build a quiz from this</h1>
-        <p class="lede" id="upload-error-message"></p>
-        <div class="stack" style="margin-top:20px;">
-          <button class="btn btn-solid" onclick="resetUploadScreen()">Try a different file</button>
-          <button class="btn-ghost" onclick="goScreen('role')" style="margin:0 auto;">&larr; Back to role selection</button>
-        </div>
+      <!-- Course Cards -->
+      <div id="igot-loading" style="text-align:center; padding:24px 0; color:var(--slate);">Finding your matched courses…</div>
+      <div id="igot-empty" style="display:none; text-align:center; padding:32px 14px; background:var(--card); border:1px dashed var(--line); border-radius:8px; margin-top:12px;">
+        <h3 style="font-size:16px; font-weight:700; font-family:'Space Grotesk',sans-serif;">Nothing to recommend yet</h3>
+        <p style="font-size:13px; color:var(--slate); margin-top:6px; line-height:1.5;">Take a diagnostic quiz first so we know which gaps to target.</p>
       </div>
+      <div id="igot-course-list" style="display:none; flex-direction:column; gap:16px; margin-top:20px;"></div>
+
+      <div class="stack" style="margin-top:24px;">
+        <button class="btn-ghost" onclick="goScreen('dashboard')" style="margin:0 auto;">&larr; Return to Dashboard</button>
+      </div>
+
+      <div class="spacer"></div>
     </div>
   </section>
 </div>

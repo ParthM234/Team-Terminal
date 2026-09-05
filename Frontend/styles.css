@@ -489,6 +489,10 @@
   justify-content: center;
   align-items: center;
   gap: 4px;
+  
+  top: 24px;
+  left: 28px;
+  z-index: 100;
 }
 .nav-hamburger span {
   width: 18px;

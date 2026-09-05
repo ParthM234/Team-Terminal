@@ -28,32 +28,113 @@
 <div id="app">
   <section class="screen active" id="screen-results">
     <div class="wrap">
-      <div class="tally"><div class="stroke"></div><div class="stroke"></div><div class="stroke on"></div><div class="stroke"></div></div>
-      <h1>Here's where you stand</h1>
+      
+      <div class="eyebrow" style="margin-top:16px;">DIAGNOSTIC COMPLETE</div>
+      <h1 style="margin-top:6px;">Here's where you stand</h1>
+      <p class="lede" style="margin-top:4px;">Evaluated against your role's required competency matrix.</p>
 
-      <div class="meter-wrap">
-        <div class="meter-num" id="meter-num">0%</div>
+      <!-- Overall Role Readiness Gauge -->
+      <div class="meter-wrap" style="margin-top:20px;">
+        <div class="meter-num mono" id="meter-num">0%</div>
         <div class="meter-lab">Ready for your role</div>
         <div class="meter-track">
-          <div class="meter-seg"><i id="seg1"></i></div>
-          <div class="meter-seg"><i id="seg2"></i></div>
-          <div class="meter-seg"><i id="seg3"></i></div>
-          <div class="meter-seg"><i id="seg4"></i></div>
-          <div class="meter-seg"><i id="seg5"></i></div>
+          <div class="meter-seg"><i id="seg1" style="width:0%;"></i></div>
+          <div class="meter-seg"><i id="seg2" style="width:0%;"></i></div>
+          <div class="meter-seg"><i id="seg3" style="width:0%;"></i></div>
+          <div class="meter-seg"><i id="seg4" style="width:0%;"></i></div>
+          <div class="meter-seg"><i id="seg5" style="width:0%;"></i></div>
         </div>
       </div>
 
-      <div class="plain-msg" id="results-message">
-        <b>Loading your results…</b>
-        <span></span>
+      <!-- AI Analysis Summary Message -->
+      <div class="plain-msg" id="results-message" style="margin-top:18px;">
+        <b>Evaluating your results…</b>
+        <span>Analyzing skill benchmarks against your designation.</span>
       </div>
 
-      <div class="ledger-list" id="results-list"></div>
+      <!-- Interactive Analytics Cards Row -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:12px; margin-top:22px;">
+        
+        <!-- Accuracy Card -->
+        <div class="ledger" style="padding:14px; margin:0;">
+          <div class="ledger-tab">ACCURACY</div>
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-top:4px;">
+            <span class="mono" id="card-acc-score" style="font-size:26px; font-weight:700;">0%</span>
+            <span class="mono" id="card-acc-badge" style="font-size:10px; color:var(--teal); font-weight:700;">ACTIVE TEST</span>
+          </div>
+          <div style="font-size:11px; color:var(--slate); text-transform:uppercase; font-weight:600; margin-top:2px;">Test Performance</div>
+          <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
+            <div>
+              <div style="display:flex; justify-content:space-between; font-size:10px; font-family:'IBM Plex Mono',monospace;">
+                <span style="color:var(--slate);">HIGHEST SKILL</span><span id="card-hi-val">0%</span>
+              </div>
+              <div style="height:4px; background:var(--line); border-radius:2px; overflow:hidden; margin-top:2px;">
+                <div id="card-hi-bar" style="width:0%; height:100%; background:var(--teal);"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex; justify-content:space-between; font-size:10px; font-family:'IBM Plex Mono',monospace;">
+                <span style="color:var(--slate);">BIGGEST GAP</span><span id="card-lo-val">0%</span>
+              </div>
+              <div style="height:4px; background:var(--line); border-radius:2px; overflow:hidden; margin-top:2px;">
+                <div id="card-lo-bar" style="width:0%; height:100%; background:var(--brick);"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Completions Bar Chart Card -->
+        <div class="ledger" style="padding:14px; margin:0;">
+          <div class="ledger-tab">COMPLETIONS</div>
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-top:4px;">
+            <span class="mono" id="card-completions-count" style="font-size:26px; font-weight:700;">0</span>
+            <span class="mono" style="font-size:10px; color:var(--slate); font-weight:700;">ALL TESTS</span>
+          </div>
+          <div style="font-size:11px; color:var(--slate); text-transform:uppercase; font-weight:600; margin-top:2px;">Quizzes Taken</div>
+          <div style="display:flex; align-items:flex-end; gap:5px; height:32px; margin-top:10px;" id="card-completions-bars"></div>
+        </div>
+
+        <!-- Learning Streak Card -->
+        <div class="ledger" style="padding:14px; margin:0;">
+          <div class="ledger-tab">STREAK</div>
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-top:4px;">
+            <span class="mono" id="card-streak-days" style="font-size:26px; font-weight:700;">0 Days</span>
+            <span class="mono" style="font-size:10px; color:var(--teal); font-weight:700;" id="card-streak-badge"></span>
+          </div>
+          <div style="font-size:11px; color:var(--slate); text-transform:uppercase; font-weight:600; margin-top:2px;">Daily Practice</div>
+          <div style="display:flex; gap:4px; margin-top:12px;" id="card-streak-week"></div>
+        </div>
+
+      </div>
+
+
+      <!-- iGOT Targeted Course Recommendation Card -->
+      <div class="ledger" style="margin-top:18px; padding:18px; border:1px solid var(--gold, #D9A62E); background:linear-gradient(to bottom right, var(--card), var(--amber-soft));">
+        <div class="ledger-tab" style="background:var(--gold, #D9A62E); color:#12181F;">RECOMMENDED PATHWAYS</div>
+        <div class="num mono">OFFICIAL CURRICULUM</div>
+        <h3 style="font-size:18px; font-weight:700; margin-top:8px; font-family:'Space Grotesk',sans-serif;">iGOT Karmayogi Targeted Courses</h3>
+        <p style="font-size:13px; color:var(--slate); margin-top:6px; line-height:1.5;">
+          Directly aligned to bridge the competency gap identified in this assessment.
+        </p>
+        <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+          <a href="igot-courses.html" class="btn btn-solid" style="display:inline-block; text-decoration:none; padding:10px 18px; font-size:13px;">
+            View Curated iGOT Courses &rarr;
+          </a>
+          <button class="btn btn-amber" onclick="goScreen('practice')" style="padding:10px 18px; font-size:13px;">
+            Start Matched Lesson
+          </button>
+        </div>
+      </div>
+
+      <!-- Skill Breakdown List -->
+      <div class="eyebrow" style="text-align:left; margin-top:24px;">SKILL BREAKDOWN</div>
+      <div class="ledger-list" id="results-list" style="margin-top:10px;"></div>
+
+      <div class="stack" style="margin-top:24px;">
+        <button class="btn-ghost" onclick="goScreen('dashboard')" style="margin:0 auto;">&larr; Back to Dashboard</button>
+      </div>
 
       <div class="spacer"></div>
-      <div class="stack">
-        <button class="btn btn-solid" onclick="goScreen('practice')">See what to learn</button>
-      </div>
     </div>
   </section>
 </div>
@@ -78,6 +159,7 @@
     <button onclick="jump('practice')">7 · Learn</button>
     <button onclick="jump('progress')">8 · Progress</button>
     <button onclick="jump('profile')">9 · Profile</button>
+    <button onclick="jump('igot-courses')">10 · iGOT Courses</button>
   </div>
   <button onclick="toggleDemoMenu()" aria-label="Jump to screen">::</button>
 </div>
@@ -97,6 +179,7 @@
     <a href="role.html" class="sb-link"><span>🎯</span> Role Diagnostic</a>
     <a href="upload.html" class="sb-link"><span>📄</span> Upload Material</a>
     <a href="progress.html" class="sb-link"><span>↗</span> Progress Tracker</a>
+    <a href="igot-courses.html" class="sb-link"><span>🏛️</span> iGOT Courses</a>
 
     <div class="sb-group-label">LEARNING</div>
     <a href="practice.html" class="sb-link"><span>📚</span> Matched Courses</a>

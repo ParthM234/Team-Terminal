@@ -53,11 +53,16 @@
       </div>
 
       <!-- Interactive Rectangular Tabs -->
-      <div class="interactive-tabs">
+      <div class="interactive-tabs" style="grid-template-columns: repeat(4, 1fr);">
         <button type="button" class="tab-card-btn active" id="tab-overview" onclick="switchDashTab('overview')">
           <span class="tab-card-badge">STATUS</span>
           <span class="tab-card-title">Overview</span>
-          <span class="tab-card-sub">Diagnostics & results</span>
+          <span class="tab-card-sub">Snapshot & summary</span>
+        </button>
+        <button type="button" class="tab-card-btn" id="tab-results" onclick="switchDashTab('results')">
+          <span class="tab-card-badge">SCORES</span>
+          <span class="tab-card-title">Quiz Results</span>
+          <span class="tab-card-sub">Diagnostics & checks</span>
         </button>
         <button type="button" class="tab-card-btn" id="tab-quiz" onclick="goScreen('role')">
           <span class="tab-card-badge">ACTION</span>
@@ -88,41 +93,113 @@
         <!-- Populated State (Quiz taken) -->
         <div id="dash-overview-full" style="display:none;">
           <div class="meter-wrap" style="margin-top:20px;">
-            <div class="meter-num mono" id="dashMeterNum">60%</div>
+            <div class="meter-num mono" id="dashMeterNum">0%</div>
             <div class="meter-lab">Ready for your role</div>
             <div class="meter-track">
-              <div class="meter-seg"><i style="width:100%;"></i></div>
-              <div class="meter-seg"><i style="width:100%;"></i></div>
-              <div class="meter-seg"><i style="width:100%;"></i></div>
-              <div class="meter-seg"><i style="width:0%;"></i></div>
-              <div class="meter-seg"><i style="width:0%;"></i></div>
+              <div class="meter-seg"><i id="dash-seg1" style="width:0%;"></i></div>
+              <div class="meter-seg"><i id="dash-seg2" style="width:0%;"></i></div>
+              <div class="meter-seg"><i id="dash-seg3" style="width:0%;"></i></div>
+              <div class="meter-seg"><i id="dash-seg4" style="width:0%;"></i></div>
+              <div class="meter-seg"><i id="dash-seg5" style="width:0%;"></i></div>
             </div>
           </div>
 
-          <div class="plain-msg" style="margin-top:20px;">
-            <b>You're strongest in Statistical Analysis.</b>
-            <span>Focus on Sampling and Data Visualization next — that's where the gap is biggest.</span>
+          <div class="plain-msg" id="dash-overview-message" style="margin-top:20px;">
+            <b>Loading…</b>
+            <span></span>
           </div>
 
-          <div class="ledger-list" style="margin-top:16px;">
-            <div class="lrow"><span class="sq2" style="background:var(--brick);"></span><span class="lname">Sampling</span><span class="dots"></span><span class="lval mono">40%</span><span class="ltag mono">NEEDS WORK</span></div>
-            <div class="lrow"><span class="sq2" style="background:var(--brick);"></span><span class="lname">Data Visualization</span><span class="dots"></span><span class="lval mono">45%</span><span class="ltag mono">NEEDS WORK</span></div>
-            <div class="lrow"><span class="sq2" style="background:var(--amber);"></span><span class="lname">Data Quality</span><span class="dots"></span><span class="lval mono">60%</span><span class="ltag mono">GETTING THERE</span></div>
-            <div class="lrow"><span class="sq2" style="background:var(--teal);"></span><span class="lname">Survey Methodology</span><span class="dots"></span><span class="lval mono">70%</span><span class="ltag mono">SOLID</span></div>
-            <div class="lrow"><span class="sq2" style="background:var(--teal);"></span><span class="lname">Statistical Analysis</span><span class="dots"></span><span class="lval mono">85%</span><span class="ltag mono">STRONG</span></div>
-          </div>
+          <div class="ledger-list" id="dash-overview-list" style="margin-top:16px;"></div>
 
           <div class="eyebrow" style="text-align:left; margin-top:24px;">UP NEXT</div>
-          <div class="ledger course-card" style="margin-top:10px;">
+          <div class="ledger course-card" style="margin-top:10px;" id="dash-upnext-card">
             <div class="num mono">01 / RECOMMENDED</div>
-            <h3 style="font-size:17px; font-weight:700; margin-top:6px; font-family:'Space Grotesk',sans-serif;">Foundations of Sampling Design</h3>
-            <p style="font-size:12.5px; color:var(--slate); margin-top:6px;">4 short lessons · about 1 hour · on iGOT Karmayogi</p>
-            <span class="course-tag mono" style="margin-top:10px;">FIXES: SAMPLING</span>
+            <h3 style="font-size:17px; font-weight:700; margin-top:6px; font-family:'Space Grotesk',sans-serif;" id="dash-upnext-title">—</h3>
+            <p style="font-size:12.5px; color:var(--slate); margin-top:6px;" id="dash-upnext-meta"></p>
+            <span class="course-tag mono" style="margin-top:10px;" id="dash-upnext-tag"></span>
           </div>
 
           <div class="stack" style="margin-top:20px;">
             <button class="btn btn-amber" onclick="goScreen('practice')">Continue learning</button>
           </div>
+        </div>
+
+      </div>
+      
+      <!-- ================= TAB 2: RESULTS & RECOMMENDATIONS ================= -->
+      <div class="dash-panel" id="panel-results" style="display:none;">
+
+        <!-- Analytics Cards Grid -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:12px; margin-top:20px;">
+          
+          <div class="ledger" style="padding:14px; margin:0;">
+            <div class="ledger-tab">AVERAGE</div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-top:4px;">
+              <span class="mono" id="dash-avg-score" style="font-size:26px; font-weight:700;">—</span>
+              <span class="mono" id="dash-avg-trend" style="font-size:10px; color:var(--teal); font-weight:700;"></span>
+            </div>
+            <div style="font-size:11px; color:var(--slate); text-transform:uppercase; font-weight:600; margin-top:2px;">Overall Accuracy</div>
+            <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
+              <div>
+                <div style="display:flex; justify-content:space-between; font-size:10px; font-family:'IBM Plex Mono',monospace;">
+                  <span style="color:var(--slate);">HIGHEST</span><span id="dash-avg-hi-val">—</span>
+                </div>
+                <div style="height:4px; background:var(--line); border-radius:2px; overflow:hidden; margin-top:2px;">
+                  <div id="dash-avg-hi-bar" style="width:0%; height:100%; background:var(--teal);"></div>
+                </div>
+              </div>
+              <div>
+                <div style="display:flex; justify-content:space-between; font-size:10px; font-family:'IBM Plex Mono',monospace;">
+                  <span style="color:var(--slate);">LOWEST</span><span id="dash-avg-lo-val">—</span>
+                </div>
+                <div style="height:4px; background:var(--line); border-radius:2px; overflow:hidden; margin-top:2px;">
+                  <div id="dash-avg-lo-bar" style="width:0%; height:100%; background:var(--amber);"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ledger" style="padding:14px; margin:0;">
+            <div class="ledger-tab">COMPLETIONS</div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-top:4px;">
+              <span class="mono" id="dash-completions-count" style="font-size:26px; font-weight:700;">0</span>
+              <span class="mono" style="font-size:10px; color:var(--slate); font-weight:700;">ALL TESTS</span>
+            </div>
+            <div style="font-size:11px; color:var(--slate); text-transform:uppercase; font-weight:600; margin-top:2px;">Quizzes Taken</div>
+            <div style="display:flex; align-items:flex-end; gap:5px; height:32px; margin-top:10px;" id="dash-completions-bars"></div>
+          </div>
+
+          <div class="ledger" style="padding:14px; margin:0;">
+            <div class="ledger-tab">STREAK</div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-top:4px;">
+              <span class="mono" id="dash-streak-days" style="font-size:26px; font-weight:700;">0 Days</span>
+              <span class="mono" style="font-size:10px; color:var(--teal); font-weight:700;" id="dash-streak-badge"></span>
+            </div>
+            <div style="font-size:11px; color:var(--slate); text-transform:uppercase; font-weight:600; margin-top:2px;">Daily Practice</div>
+            <div style="display:flex; gap:4px; margin-top:12px;" id="dash-streak-week"></div>
+          </div>
+
+        </div>
+
+        <!-- iGOT Karmayogi Dedicated Recommendation Card -->
+        <div class="ledger" style="margin-top:18px; padding:18px; border:1px solid var(--gold, #D9A62E); background:linear-gradient(to bottom right, var(--card), var(--amber-soft));">
+          <div class="ledger-tab" style="background:var(--gold, #D9A62E); color:#12181F;">RECOMMENDED PATHWAYS</div>
+          <div class="num mono">OFFICIAL CURRICULUM</div>
+          <h3 style="font-size:18px; font-weight:700; margin-top:8px; font-family:'Space Grotesk',sans-serif;">iGOT Karmayogi Targeted Courses</h3>
+          <p style="font-size:13px; color:var(--slate); margin-top:6px; line-height:1.5;">
+            We cross-referenced your lowest diagnostic scores with the official competency directory on iGOT Karmayogi.
+          </p>
+          <div style="margin-top:14px;">
+            <a href="igot-courses.html" class="btn btn-solid" style="display:inline-block; text-decoration:none; padding:10px 18px; font-size:13px;">
+              View Curated iGOT Courses &rarr;
+            </a>
+          </div>
+        </div>
+
+        <!-- Assessment Records List -->
+        <div class="eyebrow" style="text-align:left; margin-top:24px;">TEST HISTORY & BREAKDOWN</div>
+        <div class="ledger-list" id="dash-history-list" style="margin-top:10px;">
+          <p class="note" id="dash-history-empty" style="display:none;">No completed quizzes yet.</p>
         </div>
 
       </div>
@@ -196,6 +273,7 @@
     <button onclick="jump('practice')">7 · Learn</button>
     <button onclick="jump('progress')">8 · Progress</button>
     <button onclick="jump('profile')">9 · Profile</button>
+    <button onclick="jump('igot-courses')">10 · iGOT Courses</button>
   </div>
   <button onclick="toggleDemoMenu()" aria-label="Jump to screen">::</button>
 </div>
@@ -215,6 +293,7 @@
     <a href="role.html" class="sb-link"><span>🎯</span> Role Diagnostic</a>
     <a href="upload.html" class="sb-link"><span>📄</span> Upload Material</a>
     <a href="progress.html" class="sb-link"><span>↗</span> Progress Tracker</a>
+    <a href="igot-courses.html" class="sb-link"><span>🏛️</span> iGOT Courses</a>
 
     <div class="sb-group-label">LEARNING</div>
     <a href="practice.html" class="sb-link"><span>📚</span> Matched Courses</a>

@@ -61,7 +61,7 @@ function toggleSidebar() {
   if (bd) bd.classList.toggle('show');
 }
 function switchDashTab(tab) {
-  ['overview', 'progress'].forEach(t => {
+  ['overview', 'results', 'progress'].forEach(t => {
     const btn = document.getElementById('tab-' + t);
     const panel = document.getElementById('panel-' + t);
     if (btn) btn.classList.toggle('active', t === tab);
@@ -84,7 +84,8 @@ async function initPage() {
 
   const sidebarPageMap = {
     dashboard: 'dashboard.html', role: 'role.html', upload: 'upload.html',
-    progress: 'progress.html', practice: 'practice.html', profile: 'profile.html'
+    progress: 'progress.html', practice: 'practice.html', profile: 'profile.html',
+    'igot-courses': 'igot-courses.html'
   };
   const activeHref = sidebarPageMap[screen];
   document.querySelectorAll('.sb-link').forEach(link => {
@@ -140,21 +141,8 @@ async function initPage() {
       if (gRole) gRole.textContent = [currentUser.designation, currentUser.ministry].filter(Boolean).join(' · ') || "Here's your learning snapshot.";
     }
 
-    if (quizTaken) {
-      const emptyOver = document.getElementById('dash-overview-empty');
-      const fullOver = document.getElementById('dash-overview-full');
-      const emptyProg = document.getElementById('dash-progress-empty');
-      const fullProg = document.getElementById('dash-progress-full');
-      const statR = document.getElementById('statReady');
-      const statW = document.getElementById('statWeak');
-
-      if (emptyOver) emptyOver.style.display = 'none';
-      if (fullOver) fullOver.style.display = 'block';
-      if (emptyProg) emptyProg.style.display = 'none';
-      if (fullProg) fullProg.style.display = 'block';
-      if (statR) statR.textContent = readinessScore + '%';
-      if (statW) statW.textContent = '2';
-    }
+    loadDashboardOverviewTab();
+    loadDashboardResultsTab();
   }
 
   if (screen === 'results') {
@@ -163,6 +151,10 @@ async function initPage() {
 
   if (screen === 'practice') {
     loadRecommendedCourses();
+  }
+
+  if (screen === 'igot-courses') {
+    loadIgotCourses();
   }
 
   if (screen === 'spin') {
@@ -401,28 +393,105 @@ function verifyOtp() {
 }
 
 // ---- upload (upload.html only) ----
+let selectedFile = null;
+
 const dz = document.getElementById('dropzone');
 if (dz) {
   ['dragenter', 'dragover'].forEach(evt => dz.addEventListener(evt, e => { e.preventDefault(); dz.classList.add('drag'); }));
   ['dragleave', 'drop'].forEach(evt => dz.addEventListener(evt, e => { e.preventDefault(); dz.classList.remove('drag'); }));
-  dz.addEventListener('drop', () => showFilePicked('Uploaded_Training_Material.pdf'));
+  dz.addEventListener('drop', e => {
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) handleSelectedFile(file);
+  });
 }
+
 function filePicked(input) {
-  const name = input.files.length ? input.files[0].name : 'Survey_Methodology_Notes.pdf';
-  showFilePicked(name);
+  if (input.files.length) handleSelectedFile(input.files[0]);
 }
+
+function handleSelectedFile(file) {
+  const errEl = document.getElementById('upload-file-error');
+  if (file.type !== 'application/pdf') {
+    errEl.textContent = 'Only PDF files are supported right now — please choose a .pdf file.';
+    errEl.classList.add('show');
+    document.getElementById('upload-continue').disabled = true;
+    return;
+  }
+  errEl.classList.remove('show');
+  selectedFile = file;
+  showFilePicked(file.name);
+}
+
 function showFilePicked(name) {
   document.getElementById('fileName').textContent = name;
   document.getElementById('filePicked').classList.add('show');
   document.getElementById('upload-continue').disabled = false;
 }
 
-// ---- quiz flow entry point (called from role.html, upload.html, progress.html) ----
-// Used to configure the spin/quiz screens directly via DOM writes; now it
-// just navigates; spin.html now makes the actual backend calls and
-// hands data to the next page via sessionStorage (20 questions is too
-// much to pass through a URL, which is how every other page-to-page
-// handoff in this site works).
+function resetUploadScreen() {
+  selectedFile = null;
+  document.getElementById('filePicked').classList.remove('show');
+  document.getElementById('upload-continue').disabled = true;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('upload-error').style.display = 'none';
+  document.getElementById('upload-loading').style.display = 'none';
+  document.getElementById('upload-picker').style.display = 'block';
+}
+
+async function uploadAndGenerateQuiz() {
+  if (!selectedFile) return;
+  if (!currentUser || !currentUser.id) {
+    alert('You need to be signed in to take a quiz.');
+    return;
+  }
+
+  document.getElementById('upload-picker').style.display = 'none';
+  document.getElementById('upload-error').style.display = 'none';
+  document.getElementById('upload-loading').style.display = 'block';
+
+  const formData = new FormData();
+  formData.append('profile_id', currentUser.id);
+  formData.append('file', selectedFile);
+
+  try {
+    const res = await fetch(BACKEND_URL + '/generate-quiz-from-material', {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.detail || 'The quiz could not be generated from this material.');
+    }
+    if (data.skills_covered.length === 0) {
+      throw new Error("This material didn't cover any of your role's required skills well enough to build a quiz from.");
+    }
+
+    // Same sessionStorage key and shape quiz.html already reads for
+    // the standard quiz — no changes needed to quiz.html itself.
+    sessionStorage.setItem('quizData', JSON.stringify({
+      attempt_id: data.attempt_id,
+      questions: data.questions
+    }));
+
+    if (data.skills_skipped.length > 0) {
+      console.info('Skills skipped (not covered by this material):', data.skills_skipped);
+    }
+
+    window.location.href = 'quiz.html';
+  } catch (err) {
+    console.error('generate-quiz-from-material failed:', err);
+    document.getElementById('upload-loading').style.display = 'none';
+    document.getElementById('upload-error').style.display = 'block';
+    document.getElementById('upload-error-message').textContent =
+      err.message || 'Could not reach the quiz backend. Is it running?';
+  }
+}
+
+// ---- quiz flow entry point (called from role.html and progress.html) ----
+// upload.html handles its own file upload directly (see
+// uploadAndGenerateQuiz above) rather than going through here, since a
+// File object can't be handed off via sessionStorage the way
+// everything else on this site passes data between pages.
 function startQuiz(source) {
   if (source !== 'role') {
     alert("This quiz type isn't available yet — only the standard quiz works right now.");
@@ -616,6 +685,376 @@ function renderResults() {
     row.innerHTML = `<span class="sq2" style="background:${tier.color};"></span><span class="lname">${s.skill}</span><span class="dots"></span><span class="lval">${Math.round(s.score_percent)}%</span><span class="ltag">${tier.tag}</span>`;
     listEl.appendChild(row);
   });
+
+  // Accuracy card: highest-scoring skill vs. biggest gap, both from
+  // THIS attempt specifically (not historical) — gap here is
+  // required_level (0-10) converted to the same 0-100 scale as score_percent.
+  const accScoreEl = document.getElementById('card-acc-score');
+  if (accScoreEl) {
+    accScoreEl.textContent = Math.round(results.overall_score_percent) + '%';
+    document.getElementById('card-acc-badge').textContent = 'COMPLETED';
+
+    const withGap = results.skills
+      .filter(s => s.required_level !== null && s.required_level !== undefined)
+      .map(s => ({ ...s, gapPercent: Math.max(0, s.required_level * 10 - s.score_percent) }));
+
+    const highest = sorted[0];
+    document.getElementById('card-hi-val').textContent = highest ? Math.round(highest.score_percent) + '%' : '—';
+    document.getElementById('card-hi-bar').style.width = highest ? Math.round(highest.score_percent) + '%' : '0%';
+
+    const biggestGap = withGap.length ? [...withGap].sort((a, b) => b.gapPercent - a.gapPercent)[0] : null;
+    document.getElementById('card-lo-val').textContent = biggestGap ? Math.round(biggestGap.gapPercent) + '%' : '0%';
+    document.getElementById('card-lo-bar').style.width = biggestGap ? Math.round(biggestGap.gapPercent) + '%' : '0%';
+  }
+
+  loadHistoryCards('card');
+}
+
+// ============================================================
+// Shared attempt-history stats: powers the Completions/Streak cards
+// on both results.html ("card-" prefixed ids) and the dashboard's
+// Results tab ("dash-" prefixed ids), plus the dashboard's test
+// history list and average-accuracy card (dashboard only).
+// ============================================================
+async function fetchAttemptHistory() {
+  if (!currentUser || !currentUser.id) return null;
+  const { data, error } = await supabaseClient
+    .from('quiz_attempt_scores')
+    .select('attempt_id, source, taken_at, score_percent, question_count')
+    .eq('profile_id', currentUser.id)
+    .order('taken_at', { ascending: true });
+  if (error) {
+    console.error('Failed to load attempt history:', error);
+    return null;
+  }
+  return data || [];
+}
+
+function computeStreak(attempts) {
+  const dateSet = new Set(attempts.map(a => new Date(a.taken_at).toDateString()));
+  let streak = 0;
+  const cursor = new Date();
+  if (!dateSet.has(cursor.toDateString())) cursor.setDate(cursor.getDate() - 1);
+  while (dateSet.has(cursor.toDateString())) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
+function renderStreakWeek(containerId, attempts) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const dateSet = new Set(attempts.map(a => new Date(a.taken_at).toDateString()));
+  const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  const today = new Date();
+  const mondayOffset = (today.getDay() + 6) % 7;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - mondayOffset);
+
+  container.innerHTML = '';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const active = dateSet.has(d.toDateString());
+    const isToday = d.toDateString() === today.toDateString();
+    const span = document.createElement('span');
+    span.textContent = labels[i];
+    span.style.cssText = "flex:1; padding:4px 0; text-align:center; font-size:9.5px; font-family:'IBM Plex Mono',monospace; font-weight:700; border-radius:3px;";
+    if (isToday && active) {
+      span.style.background = 'var(--teal)'; span.style.color = '#fff';
+    } else if (active) {
+      span.style.background = 'var(--teal-soft)'; span.style.color = 'var(--teal)';
+    } else {
+      span.style.background = 'var(--card)'; span.style.border = '1px dashed var(--line)'; span.style.color = 'var(--slate)';
+    }
+    container.appendChild(span);
+  }
+}
+
+function renderCompletionsBars(containerId, attempts) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  const recent = attempts.slice(-6);
+  recent.forEach((a, i) => {
+    const bar = document.createElement('div');
+    const isLast = i === recent.length - 1;
+    bar.style.cssText = `flex:1; height:${Math.max(a.score_percent, 4)}%; background:${isLast ? 'var(--gold, #D9A62E)' : 'var(--line)'}; border-radius:2px;`;
+    container.appendChild(bar);
+  });
+}
+
+function timeAgo(dateStr) {
+  const diffDays = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  if (diffDays <= 0) return 'today';
+  if (diffDays === 1) return 'yesterday';
+  return diffDays + ' days ago';
+}
+
+// prefix is 'card' (results.html) or 'dash' (dashboard) — only
+// populates the Completions/Streak cards, since that's all
+// results.html has. loadDashboardResultsTab() below handles the
+// dashboard's extra Average card and history list.
+async function loadHistoryCards(prefix) {
+  const attempts = await fetchAttemptHistory();
+  if (!attempts) return;
+
+  const countEl = document.getElementById(prefix + '-completions-count');
+  if (countEl) countEl.textContent = attempts.length;
+  renderCompletionsBars(prefix + '-completions-bars', attempts);
+
+  const streakDays = computeStreak(attempts);
+  const daysEl = document.getElementById(prefix + '-streak-days');
+  if (daysEl) daysEl.textContent = streakDays + (streakDays === 1 ? ' Day' : ' Days');
+  const badgeEl = document.getElementById(prefix + '-streak-badge');
+  if (badgeEl) {
+    const today = new Date().toDateString();
+    badgeEl.textContent = attempts.some(a => new Date(a.taken_at).toDateString() === today) ? '+1 TODAY' : 'ACTIVE';
+  }
+  renderStreakWeek(prefix + '-streak-week', attempts);
+
+  return attempts;
+}
+
+async function loadDashboardResultsTab() {
+  const attempts = await loadHistoryCards('dash');
+  if (!attempts) return;
+
+  if (attempts.length > 0) {
+    const scores = attempts.map(a => a.score_percent);
+    const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+    const hi = Math.max(...scores);
+    const lo = Math.min(...scores);
+    document.getElementById('dash-avg-score').textContent = Math.round(avg) + '%';
+    document.getElementById('dash-avg-hi-val').textContent = Math.round(hi) + '%';
+    document.getElementById('dash-avg-hi-bar').style.width = Math.round(hi) + '%';
+    document.getElementById('dash-avg-lo-val').textContent = Math.round(lo) + '%';
+    document.getElementById('dash-avg-lo-bar').style.width = Math.round(lo) + '%';
+
+    if (attempts.length >= 2) {
+      const delta = attempts[attempts.length - 1].score_percent - attempts[attempts.length - 2].score_percent;
+      const trendEl = document.getElementById('dash-avg-trend');
+      trendEl.textContent = (delta >= 0 ? '▲ +' : '▼ ') + Math.abs(delta).toFixed(1) + '%';
+      trendEl.style.color = delta >= 0 ? 'var(--teal)' : 'var(--brick)';
+    }
+  }
+
+  const listEl = document.getElementById('dash-history-list');
+  const emptyEl = document.getElementById('dash-history-empty');
+  if (attempts.length === 0) {
+    emptyEl.style.display = 'block';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  const sourceLabels = { initial: 'Role Diagnostic', material: 'Uploaded Material', reassess: 'Re-assessment' };
+  [...attempts].reverse().slice(0, 10).forEach(a => {
+    const tier = a.score_percent >= 80
+      ? { tag: 'PASSED', color: 'var(--teal)' }
+      : a.score_percent >= 50
+        ? { tag: 'REVIEW', color: 'var(--amber)' }
+        : { tag: 'NEEDS WORK', color: 'var(--brick)' };
+    const row = document.createElement('div');
+    row.className = 'lrow';
+    row.style.padding = '12px 6px';
+    // Not clickable to a specific past attempt — results.html only
+    // ever shows the most recently completed quiz, not an arbitrary
+    // past one from history. A "view this specific attempt" feature
+    // would need results.html to load by attempt_id instead.
+    row.innerHTML = `<span class="sq2" style="background:${tier.color};"></span>
+      <div style="display:flex; flex-direction:column; gap:2px;">
+        <span class="lname" style="font-weight:600;">${sourceLabels[a.source] || a.source}</span>
+        <span style="font-size:11px; color:var(--slate);">${a.question_count} questions · Completed ${timeAgo(a.taken_at)}</span>
+      </div>
+      <span class="dots"></span>
+      <span class="lval mono">${Math.round(a.score_percent)}%</span>
+      <span class="ltag mono" style="color:${tier.color};">${tier.tag}</span>`;
+    listEl.appendChild(row);
+  });
+}
+
+// ---- igot-courses.html: real course matches from skill_gaps ----
+async function loadIgotCourses() {
+  const loadingEl = document.getElementById('igot-loading');
+  const emptyEl = document.getElementById('igot-empty');
+  const listEl = document.getElementById('igot-course-list');
+
+  if (!currentUser || !currentUser.id) {
+    loadingEl.textContent = 'Sign in to see your recommendations.';
+    return;
+  }
+
+  const { data: gaps, error: gapsError } = await supabaseClient
+    .from('skill_gaps')
+    .select('skill_id, skill_name, gap')
+    .eq('profile_id', currentUser.id)
+    .gt('gap', 0)
+    .order('gap', { ascending: false });
+
+  if (gapsError || !gaps || gaps.length === 0) {
+    loadingEl.style.display = 'none';
+    emptyEl.style.display = 'block';
+    return;
+  }
+
+  const skillIds = gaps.map(g => g.skill_id);
+  const { data: courseLinks, error: coursesError } = await supabaseClient
+    .from('course_skills')
+    .select('skill_id, courses(id, title, description, igot_link)')
+    .in('skill_id', skillIds);
+
+  if (coursesError || !courseLinks || courseLinks.length === 0) {
+    loadingEl.style.display = 'none';
+    emptyEl.style.display = 'block';
+    emptyEl.querySelector('h3').textContent = 'No matching courses yet';
+    emptyEl.querySelector('p').textContent = 'You have open gaps, but no course in the catalog covers them yet.';
+    return;
+  }
+
+  const gapBySkillId = Object.fromEntries(gaps.map(g => [g.skill_id, g]));
+  const courses = courseLinks
+    .filter(l => l.courses)
+    .map(l => ({
+      title: l.courses.title,
+      description: l.courses.description || '',
+      igot_link: l.courses.igot_link || 'https://igotkarmayogi.gov.in/',
+      skill_name: gapBySkillId[l.skill_id]?.skill_name || '',
+      gap: gapBySkillId[l.skill_id]?.gap || 0
+    }))
+    .sort((a, b) => b.gap - a.gap)
+    .slice(0, 6);
+
+  const badges = [
+    { label: 'PRIORITY FIX', bg: 'var(--brick)', color: '#fff' },
+    { label: 'SKILL REFINEMENT', bg: 'var(--amber)', color: '#12181F' },
+    { label: 'ADVANCED MODULE', bg: 'var(--teal)', color: '#fff' }
+  ];
+
+  listEl.innerHTML = '';
+  courses.forEach((c, i) => {
+    const badge = badges[i] || badges[badges.length - 1];
+    const gapPercent = Math.round(c.gap * 10);
+    const card = document.createElement('div');
+    card.className = 'ledger course-card';
+    card.style.margin = '0';
+    card.innerHTML = `
+      <div class="ledger-tab" style="background:${badge.bg}; color:${badge.color};">${badge.label}</div>
+      <div class="num mono">COURSE ${String(i + 1).padStart(2, '0')} · IGOT PORTAL</div>
+      <h3 style="font-size:18px; font-weight:700; margin-top:6px; font-family:'Space Grotesk',sans-serif;">${c.title}</h3>
+      <p style="font-size:13px; color:var(--slate); margin-top:6px; line-height:1.5;">${c.description || 'On iGOT Karmayogi.'}</p>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; flex-wrap:wrap; gap:10px;">
+        <span class="course-tag mono">RESOLVES GAP: ${c.skill_name.toUpperCase()} (${gapPercent}%)</span>
+        <a href="${c.igot_link}" target="_blank" rel="noopener noreferrer" class="btn btn-solid" style="padding:8px 16px; font-size:12px; text-decoration:none;">Open on iGOT &rarr;</a>
+      </div>`;
+    listEl.appendChild(card);
+  });
+
+  loadingEl.style.display = 'none';
+  listEl.style.display = 'flex';
+}
+
+
+// ---- dashboard Overview tab: real data from skill_gaps ----
+async function loadDashboardOverviewTab() {
+  if (!currentUser || !currentUser.id) return;
+
+  const statCoursesEl = document.getElementById('statCourses');
+  if (statCoursesEl) {
+    // igot_courses is the list entered at signup — the only "courses
+    // done" data currently tracked. It does NOT reflect courses
+    // completed via this site's own recommendations (nothing marks
+    // those as "done" yet), so this number undercounts real progress.
+    const { data: profile } = await supabaseClient
+      .from('profiles').select('igot_courses').eq('id', currentUser.id).single();
+    statCoursesEl.textContent = (profile?.igot_courses || []).length;
+  }
+
+  const { data: gaps, error } = await supabaseClient
+    .from('skill_gaps')
+    .select('skill_id, skill_name, required_level, current_level, gap')
+    .eq('profile_id', currentUser.id);
+
+  const emptyOver = document.getElementById('dash-overview-empty');
+  const fullOver = document.getElementById('dash-overview-full');
+  const statReadyEl = document.getElementById('statReady');
+  const statWeakEl = document.getElementById('statWeak');
+
+  if (error || !gaps || gaps.length === 0 || gaps.every(g => g.current_level === null)) {
+    // No quiz taken yet for this role — nothing to show.
+    if (emptyOver) emptyOver.style.display = 'block';
+    if (fullOver) fullOver.style.display = 'none';
+    if (statReadyEl) statReadyEl.textContent = '—';
+    if (statWeakEl) statWeakEl.textContent = '—';
+    return;
+  }
+
+  if (emptyOver) emptyOver.style.display = 'none';
+  if (fullOver) fullOver.style.display = 'block';
+
+  // Role Ready % — how close current levels are to what's required,
+  // averaged across all skills relevant to this role. This is
+  // deliberately based on required_level, not raw quiz score, since
+  // "ready for your role" should mean "meets what your role needs,"
+  // not just "answered questions correctly."
+  const readiness = gaps.map(g => Math.min(100, ((g.current_level || 0) / g.required_level) * 100));
+  const readyPercent = Math.round(readiness.reduce((a, b) => a + b, 0) / readiness.length);
+  const gapsFound = gaps.filter(g => g.gap > 0).length;
+
+  if (statReadyEl) statReadyEl.textContent = readyPercent + '%';
+  if (statWeakEl) statWeakEl.textContent = gapsFound;
+
+  document.getElementById('dashMeterNum').textContent = readyPercent + '%';
+  const filled = Math.round(readyPercent / 20);
+  for (let i = 1; i <= 5; i++) {
+    document.getElementById('dash-seg' + i).style.width = (i <= filled) ? '100%' : '0%';
+  }
+
+  const sorted = [...gaps].sort((a, b) => (b.current_level || 0) - (a.current_level || 0));
+  const strongest = sorted[0];
+  const weakest = [...gaps].sort((a, b) => b.gap - a.gap).slice(0, 2).map(g => g.skill_name);
+  const msgEl = document.getElementById('dash-overview-message');
+  if (strongest) {
+    msgEl.querySelector('b').textContent = `You're strongest in ${strongest.skill_name}.`;
+    msgEl.querySelector('span').textContent = (weakest.length && weakest.some(w => w))
+      ? `Focus on ${weakest.filter(Boolean).join(' and ')} next — that's where the gap is biggest.`
+      : "You're meeting every requirement for your role right now.";
+  }
+
+  const listEl = document.getElementById('dash-overview-list');
+  listEl.innerHTML = '';
+  sorted.forEach(g => {
+    const scorePercent = (g.current_level || 0) * 10;
+    const tier = skillTier(scorePercent);
+    const row = document.createElement('div');
+    row.className = 'lrow';
+    row.innerHTML = `<span class="sq2" style="background:${tier.color};"></span><span class="lname">${g.skill_name}</span><span class="dots"></span><span class="lval mono">${Math.round(scorePercent)}%</span><span class="ltag mono">${tier.tag}</span>`;
+    listEl.appendChild(row);
+  });
+
+  // "Up next" — reuse the same worst-gap-first course match used on
+  // practice.html and igot-courses.html, just showing the single
+  // top result here.
+  const openGaps = gaps.filter(g => g.gap > 0).sort((a, b) => b.gap - a.gap);
+  if (openGaps.length > 0) {
+    const { data: courseLinks } = await supabaseClient
+      .from('course_skills')
+      .select('skill_id, courses(title, description)')
+      .in('skill_id', openGaps.map(g => g.skill_id));
+    const gapBySkillId = Object.fromEntries(openGaps.map(g => [g.skill_id, g]));
+    const best = (courseLinks || [])
+      .filter(l => l.courses)
+      .sort((a, b) => (gapBySkillId[b.skill_id]?.gap || 0) - (gapBySkillId[a.skill_id]?.gap || 0))[0];
+    if (best) {
+      document.getElementById('dash-upnext-title').textContent = best.courses.title;
+      document.getElementById('dash-upnext-meta').textContent = best.courses.description || 'On iGOT Karmayogi';
+      document.getElementById('dash-upnext-tag').textContent = 'FIXES: ' + (gapBySkillId[best.skill_id]?.skill_name || '').toUpperCase();
+    } else {
+      document.getElementById('dash-upnext-card').style.display = 'none';
+    }
+  } else {
+    document.getElementById('dash-upnext-card').style.display = 'none';
+  }
 }
 
 // ---- practice: real course recommendations from skill_gaps (practice.html only) ----
